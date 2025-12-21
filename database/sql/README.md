@@ -125,6 +125,71 @@ psql -U postgres -d common_db -f database\sql\dcl.sql
 \i database/sql/dcl.sql
 ```
 
+## 비밀번호 인증 문제 해결
+
+PostgreSQL 비밀번호 인증 실패 시 다음 방법을 사용하세요:
+
+### 방법 1: 환경 변수로 비밀번호 설정 (권장)
+```powershell
+# 현재 세션에서만 유효
+$env:PGPASSWORD = "your_postgres_password"
+psql -U postgres -d common_db -f database\sql\dcl.sql
+
+# 사용 후 보안을 위해 제거
+Remove-Item Env:\PGPASSWORD
+```
+
+### 방법 2: .pgpass 파일 사용 (Windows)
+```powershell
+# .pgpass 파일 생성 (사용자 홈 디렉토리)
+# 형식: hostname:port:database:username:password
+$pgpassPath = "$env:USERPROFILE\.pgpass"
+"localhost:5432:*:postgres:your_postgres_password" | Out-File -FilePath $pgpassPath -Encoding ASCII
+icacls $pgpassPath /inheritance:r
+icacls $pgpassPath /grant:r "$env:USERNAME:R"
+```
+
+### 방법 3: 연결 문자열 사용
+```powershell
+# PGPASSWORD 환경 변수와 함께 실행
+$env:PGPASSWORD = "your_postgres_password"; psql -U postgres -d common_db -f database\sql\dcl.sql
+```
+
+### 방법 4: psql 대화형 모드 사용
+```powershell
+# psql에 직접 연결하여 비밀번호 입력
+psql -U postgres -d common_db
+# 비밀번호 입력 후
+\i database/sql/dcl.sql
+```
+
+### 방법 5: pg_hba.conf 설정 변경 (신뢰 모드)
+**주의**: 개발 환경에서만 사용하세요!
+
+1. `pg_hba.conf` 파일 위치 확인:
+   ```powershell
+   # 일반적인 위치
+   # C:\Program Files\PostgreSQL\18\data\pg_hba.conf
+   ```
+
+2. 파일에서 다음 줄을 찾아 수정:
+   ```
+   # 변경 전
+   host    all             all             127.0.0.1/32            md5
+   
+   # 변경 후 (신뢰 모드 - 비밀번호 불필요)
+   host    all             all             127.0.0.1/32            trust
+   ```
+
+3. PostgreSQL 서비스 재시작:
+   ```powershell
+   Restart-Service postgresql-x64-18
+   ```
+
+**⚠️ 보안 주의사항**: 
+- 방법 5(trust 모드)는 개발 환경에서만 사용하세요.
+- 운영 환경에서는 반드시 `md5` 또는 `scram-sha-256` 인증을 사용하세요.
+
 ## 파일별 상세 설명
 
 ### ddl.sql
