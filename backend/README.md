@@ -26,34 +26,79 @@ pip install uv
 
 ### 1. 의존성 설치
 
+**방법 1: uv 가상 환경 사용 (권장)**
+
 ```powershell
 # 백엔드 디렉토리로 이동
 cd backend
 
-# uv를 사용하여 의존성 설치
-uv pip install -r requirements.txt
+# 가상 환경 생성
+uv venv
 
-# 또는 pyproject.toml이 있는 경우
-uv pip install -e .
+# 가상 환경 활성화 (PowerShell)
+.venv\Scripts\Activate.ps1
+
+# 의존성 설치
+uv pip install -r requirements.txt
+```
+
+**방법 2: uv 시스템 설치**
+
+```powershell
+cd backend
+
+# 시스템에 직접 설치 (가상 환경 없이)
+uv pip install -r requirements.txt --system
+```
+
+**방법 3: 일반 pip 사용**
+
+```powershell
+cd backend
+
+# 가상 환경 생성 (선택사항)
+python -m venv venv
+
+# 가상 환경 활성화 (PowerShell)
+venv\Scripts\Activate.ps1
+
+# 의존성 설치
+pip install -r requirements.txt
+```
+
+**참고**: PowerShell에서 스크립트 실행 정책 오류가 발생하면:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### 2. 환경 변수 설정
 
-프로젝트 루트 또는 `backend` 디렉토리에 `.env` 파일을 생성하고 다음 내용을 추가하세요:
+`backend` 디렉토리에 `.env` 파일을 생성하고 다음 내용을 추가하세요:
 
 ```env
 # 데이터베이스 설정
-DATABASE_URL=postgresql://username:password@localhost:5432/dbname
+DATABASE_URL=postgresql://postgres:password@localhost:5432/common_db
 
-# 백엔드 설정
-BACKEND_PORT=8000
-BACKEND_HOST=localhost
+# 애플리케이션 설정
+APP_NAME=2026 Challenge API
+APP_VERSION=1.0.0
+DEBUG=True
 
-# 보안 설정 (선택사항)
-SECRET_KEY=your-secret-key-here
+# 서버 설정
+HOST=0.0.0.0
+PORT=8000
+
+# 보안 설정
+SECRET_KEY=your-secret-key-change-this-in-production
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# CORS 설정
+CORS_ORIGINS=["http://localhost:3000", "http://localhost:5173"]
 ```
+
+**주의**: `SECRET_KEY`는 프로덕션 환경에서 반드시 강력한 랜덤 문자열로 변경하세요.
 
 ### 3. 데이터베이스 설정
 
@@ -61,15 +106,21 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 
 ### 4. 서버 실행
 
+**방법 1: run.py 사용 (권장)**
 ```powershell
-# FastAPI 서버 실행
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+cd backend
+python run.py
 ```
 
-또는 별도 터미널에서:
-
+**방법 2: uvicorn 직접 실행**
 ```powershell
-cd ./backend; uvicorn main:app --reload
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+**방법 3: 프로젝트 루트에서 실행**
+```powershell
+cd ./backend; python run.py
 ```
 
 ### 5. 접속
@@ -79,7 +130,22 @@ cd ./backend; uvicorn main:app --reload
 - **백엔드 API**: http://localhost:8000
 - **API 문서 (Swagger UI)**: http://localhost:8000/docs
 - **API 문서 (ReDoc)**: http://localhost:8000/redoc
-- **Health Check**: http://localhost:8000/api/health
+- **Health Check**: http://localhost:8000/api/v1/health
+- **루트**: http://localhost:8000/
+
+### 6. API 엔드포인트
+
+#### 인증 (Auth)
+- `POST /api/v1/auth/register` - 회원가입
+- `POST /api/v1/auth/login` - 로그인
+- `POST /api/v1/auth/refresh` - 토큰 갱신
+
+#### 사용자 (Users)
+- `GET /api/v1/users/me` - 현재 사용자 정보 조회
+- `GET /api/v1/users` - 사용자 목록 조회
+- `GET /api/v1/users/{user_id}` - 사용자 상세 조회
+- `PUT /api/v1/users/{user_id}` - 사용자 정보 수정
+- `DELETE /api/v1/users/{user_id}` - 사용자 삭제 (소프트 삭제)
 
 ## 프로젝트 구조
 
@@ -88,24 +154,41 @@ backend/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py              # FastAPI 애플리케이션 진입점
+│   ├── database.py          # 데이터베이스 연결
+│   ├── dependencies.py      # 의존성 주입
 │   ├── api/                 # API 라우터
 │   │   ├── __init__.py
 │   │   └── v1/              # API 버전 1
 │   │       ├── __init__.py
-│   │       ├── endpoints/   # 엔드포인트
-│   │       └── routers.py   # 라우터 정의
+│   │       ├── router.py    # 라우터 통합
+│   │       └── endpoints/   # 엔드포인트
+│   │           ├── __init__.py
+│   │           ├── auth.py  # 인증 엔드포인트
+│   │           ├── users.py # 사용자 엔드포인트
+│   │           └── health.py # 헬스 체크
 │   ├── core/                # 핵심 설정
+│   │   ├── __init__.py
 │   │   ├── config.py        # 설정 파일
 │   │   └── security.py      # 보안 관련
-│   ├── models/              # 데이터베이스 모델
-│   ├── schemas/             # Pydantic 스키마
-│   ├── services/            # 비즈니스 로직
-│   ├── database.py          # 데이터베이스 연결
-│   └── dependencies.py      # 의존성 주입
+│   ├── models/              # 데이터베이스 모델 (SQLAlchemy)
+│   │   ├── __init__.py
+│   │   ├── base.py          # 기본 모델
+│   │   ├── user.py          # 사용자 모델
+│   │   ├── role.py          # 역할 모델
+│   │   ├── permission.py    # 권한 모델
+│   │   └── ...              # 기타 모델들
+│   └── schemas/             # Pydantic 스키마
+│       ├── __init__.py
+│       ├── user.py          # 사용자 스키마
+│       ├── auth.py          # 인증 스키마
+│       ├── role.py          # 역할 스키마
+│       └── permission.py    # 권한 스키마
 ├── tests/                   # 테스트 파일
-├── .env                     # 환경 변수
+├── .env                     # 환경 변수 (생성 필요)
+├── .gitignore              # Git 무시 파일
 ├── requirements.txt         # Python 의존성
-├── pyproject.toml           # 프로젝트 설정 (선택사항)
+├── pyproject.toml           # 프로젝트 설정
+├── run.py                   # 서버 실행 스크립트
 └── README.md
 ```
 
