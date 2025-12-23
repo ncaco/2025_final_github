@@ -1,6 +1,6 @@
 """파일 관련 엔드포인트"""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.file import CommonFile
@@ -12,7 +12,40 @@ import uuid
 router = APIRouter()
 
 
-@router.post("", response_model=FileResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=FileResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="파일 메타데이터 생성",
+    description="""
+    파일의 메타데이터를 등록합니다.
+    
+    **요청 본문:**
+    - `user_id`: 업로드한 사용자 ID (필수)
+    - `file_nm`: 원본 파일명 (필수)
+    - `file_path`: 저장 경로 (필수)
+    - `file_sz`: 파일 크기 (필수, 바이트 단위)
+    - `mime_typ`: MIME 타입 (선택, 예: "image/png", "application/pdf")
+    - `file_ext`: 파일 확장자 (선택, 예: "png", "pdf")
+    - `stg_typ`: 저장소 타입 (기본값: "LOCAL", 예: "LOCAL", "S3")
+    - `pub_yn`: 공개 여부 (기본값: false)
+    
+    **검증:**
+    - 사용자 존재 여부를 확인합니다.
+    - 파일 ID는 자동으로 생성됩니다 (형식: `FILE_XXXXXXXX`)
+    
+    **주의사항:**
+    - 이 엔드포인트는 파일 메타데이터만 등록합니다.
+    - 실제 파일 업로드는 별도의 파일 업로드 엔드포인트를 사용해야 합니다.
+    
+    **에러:**
+    - 404: 사용자를 찾을 수 없음
+    
+    **응답:**
+    - 생성된 파일 메타데이터 정보를 반환합니다.
+    """,
+    response_description="생성된 파일 메타데이터 정보를 반환합니다."
+)
 async def create_file(
     file_data: FileCreate,
     db: Session = Depends(get_db),
@@ -53,15 +86,39 @@ async def create_file(
     return new_file
 
 
-@router.get("", response_model=List[FileResponse])
+@router.get(
+    "",
+    response_model=List[FileResponse],
+    summary="파일 목록 조회",
+    description="""
+    삭제되지 않은 파일 목록을 페이지네이션으로 조회합니다.
+    
+    **쿼리 파라미터:**
+    - `skip`: 건너뛸 레코드 수 (기본값: 0)
+    - `limit`: 반환할 최대 레코드 수 (기본값: 100, 최대: 1000)
+    - `user_id`: 사용자 ID 필터 (선택, 특정 사용자의 파일만 조회)
+    - `file_ext`: 파일 확장자 필터 (선택, 예: "png", "pdf")
+    - `mime_typ`: MIME 타입 필터 (선택, 예: "image/png")
+    - `stg_typ`: 저장소 타입 필터 (선택, 예: "LOCAL", "S3")
+    - `pub_yn`: 공개 여부 필터 (선택, true/false)
+    
+    **정렬:**
+    - 생성일시(`crt_dt`) 기준 내림차순으로 정렬됩니다 (최신순).
+    
+    **응답:**
+    - 파일 목록을 배열로 반환합니다.
+    - 삭제된 파일은 제외됩니다.
+    """,
+    response_description="파일 목록을 배열로 반환합니다."
+)
 async def get_files(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
+    limit: int = Query(100, ge=1, le=1000, description="반환할 최대 레코드 수"),
     user_id: Optional[str] = Query(None, description="사용자 ID 필터"),
-    file_ext: Optional[str] = Query(None, description="파일 확장자 필터"),
-    mime_typ: Optional[str] = Query(None, description="MIME 타입 필터"),
-    stg_typ: Optional[str] = Query(None, description="저장소 타입 필터"),
-    pub_yn: Optional[bool] = Query(None, description="공개 여부 필터"),
+    file_ext: Optional[str] = Query(None, description="파일 확장자 필터 (예: png, pdf)"),
+    mime_typ: Optional[str] = Query(None, description="MIME 타입 필터 (예: image/png)"),
+    stg_typ: Optional[str] = Query(None, description="저장소 타입 필터 (예: LOCAL, S3)"),
+    pub_yn: Optional[bool] = Query(None, description="공개 여부 필터 (true/false)"),
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
@@ -83,9 +140,31 @@ async def get_files(
     return files
 
 
-@router.get("/{file_id}", response_model=FileResponse)
+@router.get(
+    "/{file_id}",
+    response_model=FileResponse,
+    summary="파일 상세 조회",
+    description="""
+    특정 파일의 메타데이터를 조회합니다.
+    
+    **경로 파라미터:**
+    - `file_id`: 조회할 파일의 고유 ID
+    
+    **권한:**
+    - 공개 파일(`pub_yn=True`)은 모든 인증된 사용자가 조회 가능합니다.
+    - 비공개 파일은 파일 소유자만 조회 가능합니다.
+    
+    **에러:**
+    - 403: 파일 접근 권한 없음
+    - 404: 파일을 찾을 수 없음
+    
+    **응답:**
+    - 파일의 메타데이터 정보를 반환합니다.
+    """,
+    response_description="파일의 메타데이터 정보를 반환합니다."
+)
 async def get_file(
-    file_id: str,
+    file_id: str = Path(..., description="파일 고유 ID"),
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
@@ -111,10 +190,35 @@ async def get_file(
     return file
 
 
-@router.put("/{file_id}", response_model=FileResponse)
+@router.put(
+    "/{file_id}",
+    response_model=FileResponse,
+    summary="파일 메타데이터 수정",
+    description="""
+    파일의 메타데이터를 수정합니다.
+    
+    **경로 파라미터:**
+    - `file_id`: 수정할 파일의 고유 ID
+    
+    **요청 본문:**
+    - 수정할 필드만 포함하면 됩니다 (부분 업데이트 지원)
+    - 수정 가능한 필드: `file_nm` (파일명), `pub_yn` (공개 여부), `use_yn` (사용 여부)
+    
+    **권한:**
+    - 파일 소유자만 수정 가능합니다.
+    
+    **에러:**
+    - 403: 파일 수정 권한 없음
+    - 404: 파일을 찾을 수 없음
+    
+    **응답:**
+    - 수정된 파일 메타데이터 정보를 반환합니다.
+    """,
+    response_description="수정된 파일 메타데이터 정보를 반환합니다."
+)
 async def update_file(
-    file_id: str,
-    file_data: FileUpdate,
+    file_id: str = Path(..., description="파일 고유 ID"),
+    file_data: FileUpdate = ...,
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
@@ -150,9 +254,39 @@ async def update_file(
     return file
 
 
-@router.delete("/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{file_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="파일 삭제",
+    description="""
+    파일을 소프트 삭제합니다.
+    
+    **경로 파라미터:**
+    - `file_id`: 삭제할 파일의 고유 ID
+    
+    **소프트 삭제:**
+    - 실제로 데이터베이스에서 삭제되지 않고 `del_yn` 플래그가 `True`로 설정됩니다.
+    - 삭제 일시(`del_dt`)와 삭제자 정보가 기록됩니다.
+    - 삭제된 파일은 조회되지 않습니다.
+    
+    **권한:**
+    - 파일 소유자만 삭제 가능합니다.
+    
+    **주의사항:**
+    - 이 엔드포인트는 메타데이터만 삭제합니다.
+    - 실제 파일 삭제는 별도의 파일 관리 시스템에서 처리해야 합니다.
+    
+    **에러:**
+    - 403: 파일 삭제 권한 없음
+    - 404: 파일을 찾을 수 없음
+    
+    **응답:**
+    - 204 No Content: 성공적으로 삭제됨
+    """,
+    response_description="성공 시 응답 본문 없음 (204 No Content)"
+)
 async def delete_file(
-    file_id: str,
+    file_id: str = Path(..., description="파일 고유 ID"),
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):

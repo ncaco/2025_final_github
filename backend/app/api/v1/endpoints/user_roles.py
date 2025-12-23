@@ -1,7 +1,7 @@
 """사용자-역할 매핑 관련 엔드포인트"""
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user_role import CommonUserRole
@@ -14,7 +14,35 @@ import uuid
 router = APIRouter()
 
 
-@router.post("", response_model=UserRoleResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=UserRoleResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="사용자-역할 매핑 생성",
+    description="""
+    사용자에게 역할을 할당합니다.
+    
+    **요청 본문:**
+    - `user_id`: 사용자 고유 ID (필수)
+    - `role_id`: 역할 고유 ID (필수)
+    - `asgn_by`: 할당한 사용자 ID (선택, 기본값: 현재 사용자)
+    - `asgn_dt`: 할당일시 (선택, 기본값: 현재 시간)
+    - `expr_dt`: 만료일시 (선택, NULL이면 무기한)
+    
+    **검증:**
+    - 사용자와 역할의 존재 여부를 확인합니다.
+    - 중복 매핑을 방지합니다 (동일한 사용자-역할 조합은 한 번만 생성 가능).
+    - 매핑 ID는 자동으로 생성됩니다 (형식: `UR_XXXXXXXX`)
+    
+    **에러:**
+    - 400: 이미 존재하는 사용자-역할 매핑
+    - 404: 사용자 또는 역할을 찾을 수 없음
+    
+    **응답:**
+    - 생성된 사용자-역할 매핑 정보를 반환합니다.
+    """,
+    response_description="생성된 사용자-역할 매핑 정보를 반환합니다."
+)
 async def create_user_role(
     user_role_data: UserRoleCreate,
     db: Session = Depends(get_db),
@@ -81,13 +109,32 @@ async def create_user_role(
     return new_user_role
 
 
-@router.get("", response_model=List[UserRoleResponse])
+@router.get(
+    "",
+    response_model=List[UserRoleResponse],
+    summary="사용자-역할 매핑 목록 조회",
+    description="""
+    삭제되지 않은 사용자-역할 매핑 목록을 페이지네이션으로 조회합니다.
+    
+    **쿼리 파라미터:**
+    - `skip`: 건너뛸 레코드 수 (기본값: 0)
+    - `limit`: 반환할 최대 레코드 수 (기본값: 100, 최대: 1000)
+    - `user_id`: 사용자 ID 필터 (선택, 특정 사용자에게 할당된 역할만 조회)
+    - `role_id`: 역할 ID 필터 (선택, 특정 역할이 할당된 사용자만 조회)
+    - `use_yn`: 사용 여부 필터 (선택, true/false)
+    
+    **응답:**
+    - 사용자-역할 매핑 목록을 배열로 반환합니다.
+    - 삭제된 매핑은 제외됩니다.
+    """,
+    response_description="사용자-역할 매핑 목록을 배열로 반환합니다."
+)
 async def get_user_roles(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
+    limit: int = Query(100, ge=1, le=1000, description="반환할 최대 레코드 수"),
     user_id: str = Query(None, description="사용자 ID 필터"),
     role_id: str = Query(None, description="역할 ID 필터"),
-    use_yn: bool = Query(None, description="사용 여부 필터"),
+    use_yn: bool = Query(None, description="사용 여부 필터 (true/false)"),
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
@@ -105,9 +152,26 @@ async def get_user_roles(
     return user_roles
 
 
-@router.get("/{user_role_id}", response_model=UserRoleResponse)
+@router.get(
+    "/{user_role_id}",
+    response_model=UserRoleResponse,
+    summary="사용자-역할 매핑 상세 조회",
+    description="""
+    특정 사용자-역할 매핑의 상세 정보를 조회합니다.
+    
+    **경로 파라미터:**
+    - `user_role_id`: 조회할 매핑의 고유 ID
+    
+    **에러:**
+    - 404: 사용자-역할 매핑을 찾을 수 없음
+    
+    **응답:**
+    - 사용자-역할 매핑의 상세 정보를 반환합니다.
+    """,
+    response_description="사용자-역할 매핑의 상세 정보를 반환합니다."
+)
 async def get_user_role(
-    user_role_id: str,
+    user_role_id: str = Path(..., description="사용자-역할 매핑 고유 ID"),
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
@@ -126,10 +190,31 @@ async def get_user_role(
     return user_role
 
 
-@router.put("/{user_role_id}", response_model=UserRoleResponse)
+@router.put(
+    "/{user_role_id}",
+    response_model=UserRoleResponse,
+    summary="사용자-역할 매핑 수정",
+    description="""
+    사용자-역할 매핑의 정보를 수정합니다.
+    
+    **경로 파라미터:**
+    - `user_role_id`: 수정할 매핑의 고유 ID
+    
+    **요청 본문:**
+    - 수정할 필드만 포함하면 됩니다 (부분 업데이트 지원)
+    - 수정 가능한 필드: `expr_dt` (만료일시), `use_yn` (사용 여부)
+    
+    **에러:**
+    - 404: 사용자-역할 매핑을 찾을 수 없음
+    
+    **응답:**
+    - 수정된 사용자-역할 매핑 정보를 반환합니다.
+    """,
+    response_description="수정된 사용자-역할 매핑 정보를 반환합니다."
+)
 async def update_user_role(
-    user_role_id: str,
-    user_role_data: UserRoleUpdate,
+    user_role_id: str = Path(..., description="사용자-역할 매핑 고유 ID"),
+    user_role_data: UserRoleUpdate = ...,
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
@@ -158,9 +243,34 @@ async def update_user_role(
     return user_role
 
 
-@router.delete("/{user_role_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{user_role_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="사용자-역할 매핑 삭제",
+    description="""
+    사용자-역할 매핑을 소프트 삭제합니다.
+    
+    **경로 파라미터:**
+    - `user_role_id`: 삭제할 매핑의 고유 ID
+    
+    **소프트 삭제:**
+    - 실제로 데이터베이스에서 삭제되지 않고 `del_yn` 플래그가 `True`로 설정됩니다.
+    - 삭제 일시(`del_dt`)와 삭제자 정보가 기록됩니다.
+    - 삭제된 매핑은 조회되지 않습니다.
+    
+    **주의사항:**
+    - 매핑을 삭제하면 해당 사용자는 더 이상 해당 역할을 가지지 않습니다.
+    
+    **에러:**
+    - 404: 사용자-역할 매핑을 찾을 수 없음
+    
+    **응답:**
+    - 204 No Content: 성공적으로 삭제됨
+    """,
+    response_description="성공 시 응답 본문 없음 (204 No Content)"
+)
 async def delete_user_role(
-    user_role_id: str,
+    user_role_id: str = Path(..., description="사용자-역할 매핑 고유 ID"),
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):

@@ -22,7 +22,35 @@ import uuid
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="사용자 회원가입",
+    description="""
+    새로운 사용자를 등록합니다.
+    
+    **요청 본문:**
+    - `eml`: 이메일 주소 (필수, 중복 불가)
+    - `username`: 사용자명 (필수, 최소 3자, 중복 불가)
+    - `password`: 비밀번호 (필수, 최소 8자)
+    - `nm`: 이름 (선택)
+    - `nickname`: 닉네임 (선택)
+    - `telno`: 전화번호 (선택)
+    
+    **검증:**
+    - 사용자명과 이메일 중복 체크를 수행합니다.
+    - 비밀번호는 bcrypt로 해싱되어 저장됩니다.
+    - 사용자 ID는 자동으로 생성됩니다 (형식: `USER_XXXXXXXX`)
+    
+    **에러:**
+    - 400: 이미 존재하는 사용자명 또는 이메일
+    
+    **응답:**
+    - 생성된 사용자 정보를 반환합니다 (비밀번호 제외)
+    """,
+    response_description="생성된 사용자 정보를 반환합니다."
+)
 async def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
@@ -61,7 +89,43 @@ async def register(
     return new_user
 
 
-@router.post("/login", response_model=Token)
+@router.post(
+    "/login",
+    response_model=Token,
+    summary="사용자 로그인",
+    description="""
+    사용자 인증을 수행하고 액세스 토큰과 리프레시 토큰을 발급합니다.
+    
+    **요청 형식:**
+    - `application/x-www-form-urlencoded` 형식으로 전송해야 합니다.
+    - `username`: 사용자명 또는 이메일 주소
+    - `password`: 비밀번호
+    
+    **인증 과정:**
+    1. 사용자명 또는 이메일로 사용자 조회
+    2. 비밀번호 검증 (bcrypt)
+    3. 사용자 활성 상태 확인
+    4. JWT 액세스 토큰 및 리프레시 토큰 생성
+    5. 리프레시 토큰을 데이터베이스에 저장 (해시화)
+    
+    **토큰 정보:**
+    - `access_token`: JWT 액세스 토큰 (기본 만료 시간: 30분)
+    - `refresh_token`: 리프레시 토큰 (기본 만료 시간: 7일)
+    - `token_type`: "bearer"
+    
+    **에러:**
+    - 401: 사용자명 또는 비밀번호가 올바르지 않음
+    - 400: 비활성화된 사용자 또는 삭제된 사용자
+    
+    **사용 예시:**
+    ```
+    curl -X POST "http://localhost:8000/api/v1/auth/login" \\
+         -H "Content-Type: application/x-www-form-urlencoded" \\
+         -d "username=user@example.com&password=yourpassword"
+    ```
+    """,
+    response_description="액세스 토큰과 리프레시 토큰을 포함한 인증 정보를 반환합니다."
+)
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db)
@@ -120,7 +184,38 @@ async def login(
     }
 
 
-@router.post("/refresh", response_model=Token)
+@router.post(
+    "/refresh",
+    response_model=Token,
+    summary="액세스 토큰 갱신",
+    description="""
+    리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.
+    
+    **요청 본문:**
+    - `refresh_token`: 유효한 리프레시 토큰 (JSON 형식: `{"refresh_token": "..."}`)
+    
+    **갱신 과정:**
+    1. 리프레시 토큰 검증 (JWT 디코딩 및 타입 확인)
+    2. 사용자 존재 및 활성 상태 확인
+    3. 데이터베이스에 저장된 리프레시 토큰과 비교 (해시 검증)
+    4. 토큰 만료 여부 확인
+    5. 토큰 취소 여부 확인
+    6. 새 액세스 토큰 생성 및 반환
+    
+    **주의사항:**
+    - 리프레시 토큰은 만료되기 전까지 재사용 가능합니다.
+    - 토큰 사용 시 `last_use_dt`가 업데이트됩니다.
+    - 취소된 토큰(`rvk_yn=True`)은 사용할 수 없습니다.
+    
+    **에러:**
+    - 401: 유효하지 않은 리프레시 토큰
+    - 401: 사용자를 찾을 수 없음
+    
+    **응답:**
+    - 새로운 액세스 토큰과 기존 리프레시 토큰을 반환합니다.
+    """,
+    response_description="새로운 액세스 토큰과 리프레시 토큰을 반환합니다."
+)
 async def refresh_token(
     refresh_token: str,
     db: Session = Depends(get_db)
