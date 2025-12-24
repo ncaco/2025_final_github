@@ -1,7 +1,8 @@
 """애플리케이션 설정"""
-from typing import List
+from typing import List, Union
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, field_validator
+import json
 
 
 class Settings(BaseSettings):
@@ -43,10 +44,29 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS"
     )
     
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """CORS origins 파싱"""
+        if isinstance(v, str):
+            # JSON 문자열인 경우
+            if v.startswith('['):
+                try:
+                    return json.loads(v)
+                except json.JSONDecodeError:
+                    pass
+            # 쉼표로 구분된 문자열인 경우
+            return [origin.strip() for origin in v.split(',') if origin.strip()]
+        return v if isinstance(v, list) else ["http://localhost:3000"]
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
 
 
 settings = Settings()
+
+# 디버그 모드에서 CORS origins 확인
+if settings.debug:
+    print(f"CORS Origins: {settings.cors_origins}")
 

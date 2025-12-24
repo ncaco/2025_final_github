@@ -14,12 +14,17 @@ app = FastAPI(
 )
 
 # CORS 설정
+# 개발 모드에서 CORS origins 확인 및 설정
+if settings.debug:
+    print(f"CORS Origins 설정: {settings.cors_origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # API 라우터 등록

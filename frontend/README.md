@@ -71,6 +71,217 @@ frontend/
 └── tsconfig.json       # TypeScript 설정
 ```
 
+## 서비스 구성
+
+### 시스템 아키텍처
+
+프로젝트는 프론트엔드(Next.js), 백엔드(FastAPI), 데이터베이스(PostgreSQL)로 구성된 3계층 아키텍처를 따릅니다.
+
+```mermaid
+graph TB
+    subgraph Client["클라이언트"]
+        Browser["브라우저<br/>(사용자)"]
+    end
+    
+    subgraph Frontend["프론트엔드"]
+        NextJS["Next.js<br/>(React + TypeScript)"]
+        Components["컴포넌트"]
+        Pages["페이지"]
+    end
+    
+    subgraph Backend["백엔드"]
+        FastAPI["FastAPI<br/>(Python)"]
+        API["REST API<br/>(/api/v1)"]
+        Auth["인증/인가<br/>(JWT)"]
+    end
+    
+    subgraph Database["데이터베이스"]
+        PostgreSQL["PostgreSQL"]
+    end
+    
+    Browser -->|HTTP/HTTPS| NextJS
+    NextJS --> Components
+    NextJS --> Pages
+    Components -->|API 호출| FastAPI
+    Pages -->|API 호출| FastAPI
+    FastAPI --> API
+    API --> Auth
+    Auth -->|쿼리| PostgreSQL
+    API -->|쿼리| PostgreSQL
+```
+
+### API 통신 흐름
+
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant Frontend as Next.js 프론트엔드
+    participant Backend as FastAPI 백엔드
+    participant DB as PostgreSQL
+    
+    User->>Frontend: 페이지 요청
+    Frontend->>Backend: API 요청 (JWT 토큰 포함)
+    Backend->>Backend: 토큰 검증
+    Backend->>DB: 데이터 조회/변경
+    DB-->>Backend: 데이터 반환
+    Backend-->>Frontend: JSON 응답
+    Frontend-->>User: UI 렌더링
+```
+
+### 인증 흐름
+
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant Frontend as 프론트엔드
+    participant Backend as 백엔드
+    participant DB as 데이터베이스
+    
+    User->>Frontend: 로그인 요청
+    Frontend->>Backend: POST /api/v1/auth/login
+    Backend->>DB: 사용자 인증 정보 확인
+    DB-->>Backend: 사용자 정보 반환
+    Backend->>Backend: 비밀번호 검증
+    Backend->>Backend: Access Token 생성
+    Backend->>Backend: Refresh Token 생성
+    Backend-->>Frontend: 토큰 반환
+    Frontend->>Frontend: 토큰 저장 (localStorage)
+    
+    Note over Frontend,Backend: 이후 API 요청
+    Frontend->>Backend: API 요청 (Authorization 헤더)
+    Backend->>Backend: 토큰 검증
+    Backend-->>Frontend: 인증된 응답
+```
+
+### 주요 기능
+
+프론트엔드는 다음 주요 기능을 제공합니다:
+
+#### 1. 인증 및 인가
+- **회원가입**: 새로운 사용자 계정 생성
+- **로그인**: 이메일/비밀번호 기반 인증
+- **토큰 관리**: Access Token 및 Refresh Token 자동 갱신
+- **로그아웃**: 세션 종료 및 토큰 삭제
+
+#### 2. 사용자 관리
+- **프로필 조회**: 현재 로그인한 사용자 정보 조회
+- **사용자 목록**: 전체 사용자 목록 조회 (관리자)
+- **사용자 상세**: 특정 사용자 상세 정보 조회
+- **프로필 수정**: 사용자 정보 업데이트
+- **사용자 삭제**: 계정 삭제 (관리자)
+
+#### 3. 역할 및 권한 관리
+- **역할 관리**: 역할 생성, 조회, 수정, 삭제
+- **권한 관리**: 권한 생성, 조회, 수정, 삭제
+- **역할-권한 매핑**: 역할에 권한 할당/해제
+- **사용자-역할 매핑**: 사용자에게 역할 할당/해제
+
+#### 4. 파일 관리
+- **파일 업로드**: 파일 메타데이터 등록
+- **파일 목록**: 업로드된 파일 목록 조회
+- **파일 상세**: 파일 정보 조회
+- **파일 수정**: 파일 메타데이터 수정
+- **파일 삭제**: 파일 삭제
+
+#### 5. 다국어 지원
+- **로케일 관리**: 다국어 리소스 생성, 조회, 수정, 삭제
+- **언어별 리소스**: 언어 코드별 번역 리소스 관리
+- **리소스 타입**: 라벨, 메시지, 에러 메시지 등 타입별 관리
+
+#### 6. 감사 로그
+- **로그 조회**: 시스템 활동 로그 조회
+- **필터링**: 사용자, 액션 타입별 필터링
+- **기간별 조회**: 날짜 범위별 로그 조회
+
+#### 7. OAuth 계정 관리
+- **OAuth 연동**: 소셜 로그인 계정 연동
+- **계정 목록**: 연동된 OAuth 계정 조회
+- **계정 해제**: OAuth 계정 연동 해제
+
+### API 엔드포인트
+
+백엔드 API는 RESTful 원칙을 따르며, 모든 엔드포인트는 `/api/v1` 접두사를 사용합니다.
+
+#### 헬스 체크
+- `GET /api/v1/health` - 서버 상태 확인
+
+#### 인증 (`/api/v1/auth`)
+- `POST /api/v1/auth/register` - 회원가입
+- `POST /api/v1/auth/login` - 로그인
+- `POST /api/v1/auth/logout` - 로그아웃
+- `POST /api/v1/auth/refresh` - 토큰 갱신
+- `POST /api/v1/auth/verify` - 토큰 검증
+
+#### 사용자 관리 (`/api/v1/users`)
+- `GET /api/v1/users/me` - 현재 사용자 정보 조회
+- `GET /api/v1/users` - 사용자 목록 조회 (페이지네이션 지원)
+- `GET /api/v1/users/{user_id}` - 사용자 상세 정보 조회
+- `PUT /api/v1/users/me` - 현재 사용자 정보 수정
+- `PUT /api/v1/users/{user_id}` - 사용자 정보 수정 (관리자)
+- `DELETE /api/v1/users/{user_id}` - 사용자 삭제 (관리자)
+
+#### 역할 관리 (`/api/v1/roles`)
+- `GET /api/v1/roles` - 역할 목록 조회
+- `GET /api/v1/roles/{role_id}` - 역할 상세 정보 조회
+- `POST /api/v1/roles` - 역할 생성
+- `PUT /api/v1/roles/{role_id}` - 역할 수정
+- `DELETE /api/v1/roles/{role_id}` - 역할 삭제
+
+#### 권한 관리 (`/api/v1/permissions`)
+- `GET /api/v1/permissions` - 권한 목록 조회
+- `GET /api/v1/permissions/{permission_id}` - 권한 상세 정보 조회
+- `POST /api/v1/permissions` - 권한 생성
+- `PUT /api/v1/permissions/{permission_id}` - 권한 수정
+- `DELETE /api/v1/permissions/{permission_id}` - 권한 삭제
+
+#### 역할-권한 매핑 (`/api/v1/role-permissions`)
+- `GET /api/v1/role-permissions` - 역할-권한 매핑 목록 조회
+- `GET /api/v1/role-permissions/{role_id}` - 특정 역할의 권한 목록 조회
+- `POST /api/v1/role-permissions` - 역할에 권한 할당
+- `DELETE /api/v1/role-permissions/{role_permission_id}` - 역할-권한 매핑 삭제
+
+#### 사용자-역할 매핑 (`/api/v1/user-roles`)
+- `GET /api/v1/user-roles` - 사용자-역할 매핑 목록 조회
+- `GET /api/v1/user-roles/{user_id}` - 특정 사용자의 역할 목록 조회
+- `POST /api/v1/user-roles` - 사용자에 역할 할당
+- `DELETE /api/v1/user-roles/{user_role_id}` - 사용자-역할 매핑 삭제
+
+#### OAuth 계정 (`/api/v1/oauth-accounts`)
+- `GET /api/v1/oauth-accounts` - OAuth 계정 목록 조회
+- `GET /api/v1/oauth-accounts/{oauth_account_id}` - OAuth 계정 상세 정보 조회
+- `POST /api/v1/oauth-accounts` - OAuth 계정 연동
+- `DELETE /api/v1/oauth-accounts/{oauth_account_id}` - OAuth 계정 연동 해제
+
+#### 리프레시 토큰 (`/api/v1/refresh-tokens`)
+- `GET /api/v1/refresh-tokens` - 리프레시 토큰 목록 조회
+- `GET /api/v1/refresh-tokens/{token_id}` - 리프레시 토큰 상세 정보 조회
+- `DELETE /api/v1/refresh-tokens/{token_id}` - 리프레시 토큰 삭제
+
+#### 감사 로그 (`/api/v1/audit-logs`)
+- `GET /api/v1/audit-logs` - 감사 로그 목록 조회 (필터링 및 페이지네이션 지원)
+- `GET /api/v1/audit-logs/{log_id}` - 감사 로그 상세 정보 조회
+
+#### 파일 관리 (`/api/v1/files`)
+- `GET /api/v1/files` - 파일 목록 조회 (페이지네이션 지원)
+- `GET /api/v1/files/{file_id}` - 파일 상세 정보 조회
+- `POST /api/v1/files` - 파일 메타데이터 생성
+- `PUT /api/v1/files/{file_id}` - 파일 메타데이터 수정
+- `DELETE /api/v1/files/{file_id}` - 파일 삭제
+
+#### 로케일 관리 (`/api/v1/locales`)
+- `GET /api/v1/locales` - 다국어 리소스 목록 조회 (필터링 지원)
+- `GET /api/v1/locales/{locale_id}` - 다국어 리소스 상세 정보 조회
+- `POST /api/v1/locales` - 다국어 리소스 생성
+- `PUT /api/v1/locales/{locale_id}` - 다국어 리소스 수정
+- `DELETE /api/v1/locales/{locale_id}` - 다국어 리소스 삭제
+
+### API 문서
+
+백엔드 API의 상세한 문서는 다음 URL에서 확인할 수 있습니다:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
 ## 코딩 컨벤션
 
 ### TypeScript/JavaScript 명명 규칙
