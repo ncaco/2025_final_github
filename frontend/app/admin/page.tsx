@@ -4,6 +4,7 @@
 
 'use client';
 
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -25,8 +26,8 @@ export default function AdminPage() {
                 <CardDescription>사용자 목록 조회 및 관리</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="w-full" disabled>
-                  사용자 목록 (준비 중)
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/admin/users">사용자 목록</Link>
                 </Button>
               </CardContent>
             </Card>

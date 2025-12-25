@@ -48,19 +48,34 @@ const navItems: NavItem[] = [
 export function AdminSidebar() {
   const pathname = usePathname();
 
+  const isActive = (href: string) => {
+    if (!pathname) return false;
+    
+    // 정확히 일치하는 경우
+    if (pathname === href) return true;
+    
+    // /admin은 정확히 일치할 때만 active
+    if (href === '/admin') {
+      return pathname === '/admin';
+    }
+    
+    // 다른 메뉴는 해당 경로로 시작할 때 active
+    return pathname.startsWith(href + '/') || pathname === href;
+  };
+
   return (
     <aside className="w-64 border-r bg-muted/30 min-h-screen">
       <div className="p-6">
         <nav className="space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
                   'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                  isActive
+                  active
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                 )}

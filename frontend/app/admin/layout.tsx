@@ -7,8 +7,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AdminHeader } from '@/components/admin/AdminHeader';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminHeader } from '@/components/admin/layout/AdminHeader';
+import { AdminSidebar } from '@/components/admin/layout/AdminSidebar';
 import { Loading } from '@/components/common/Loading';
 import { useAuth } from '@/hooks/useAuth';
 import { isAdmin } from '@/utils/roles';

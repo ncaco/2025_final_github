@@ -30,3 +30,20 @@ export async function getUsers(params?: { skip?: number; limit?: number }): Prom
   const queryString = queryParams.toString();
   return get<User[]>(`/api/v1/users${queryString ? `?${queryString}` : ''}`);
 }
+
+/**
+ * 사용자 정보 수정
+ */
+export async function updateUser(
+  userId: string,
+  userData: Partial<User>
+): Promise<User> {
+  return put<User>(`/api/v1/users/${userId}`, userData);
+}
+
+/**
+ * 사용자 삭제 (소프트 삭제)
+ */
+export async function deleteUser(userId: string): Promise<void> {
+  return del<void>(`/api/v1/users/${userId}`);
+}
