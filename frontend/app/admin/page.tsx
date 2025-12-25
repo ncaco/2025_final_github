@@ -1,84 +1,13 @@
 /**
- * 관리자 페이지
+ * 관리자 대시보드 페이지
  */
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { Loading } from '@/components/common/Loading';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { isAdmin } from '@/utils/roles';
-import { useToast } from '@/hooks/useToast';
 
 export default function AdminPage() {
-  const router = useRouter();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { toast } = useToast();
-  const [isAdminUser, setIsAdminUser] = useState<boolean | null>(null);
-  const [isChecking, setIsChecking] = useState(true);
-
-  const checkAdminPermission = useCallback(async () => {
-    // 인증 로딩 중이면 대기
-    if (authLoading) {
-      return;
-    }
-
-    // 인증되지 않았으면 로그인 페이지로 리다이렉트
-    if (!isAuthenticated || !user) {
-      setIsChecking(false);
-      setIsAdminUser(false);
-      router.push('/auth/login');
-      return;
-    }
-
-    try {
-      const admin = await isAdmin(user.user_id);
-      setIsAdminUser(admin);
-      
-      if (!admin) {
-        toast({
-          title: '접근 권한 없음',
-          description: '관리자만 접근할 수 있는 페이지입니다.',
-          variant: 'destructive',
-        });
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('관리자 확인 중 오류:', error);
-      setIsAdminUser(false);
-      toast({
-        title: '오류',
-        description: '관리자 권한을 확인하는 중 오류가 발생했습니다.',
-        variant: 'destructive',
-      });
-      router.push('/');
-    } finally {
-      setIsChecking(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.user_id, authLoading]);
-
-  useEffect(() => {
-    checkAdminPermission();
-  }, [checkAdminPermission]);
-
-  // 인증 로딩 중이거나 권한 확인 중이면 로딩 표시
-  if (authLoading || isChecking || isAdminUser === null) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loading size="lg" />
-      </div>
-    );
-  }
-
-  // 관리자가 아니면 아무것도 표시하지 않음 (이미 리다이렉트됨)
-  if (!isAdminUser) {
-    return null;
-  }
-
   return (
       <div className="container mx-auto py-10">
         <div className="space-y-8">

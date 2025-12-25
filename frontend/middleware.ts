@@ -20,7 +20,11 @@ export function middleware(request: NextRequest) {
   // localStorage는 서버 사이드에서 접근 불가하므로 클라이언트 컴포넌트에서 처리
   // 미들웨어는 기본적인 리다이렉트만 처리
 
-  return NextResponse.next();
+  // 경로 정보를 헤더에 추가하여 레이아웃에서 사용할 수 있도록 함
+  const response = NextResponse.next();
+  response.headers.set('x-pathname', pathname);
+
+  return response;
 }
 
 export const config = {
