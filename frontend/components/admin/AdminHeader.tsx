@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { logoutApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/useToast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export function AdminHeader() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function AdminHeader() {
   const [isVisible, setIsVisible] = useState(true);
   const [isTopHovered, setIsTopHovered] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,6 +54,14 @@ export function AdminHeader() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  const handleGoToMain = () => {
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmGoToMain = () => {
+    router.push('/');
+  };
 
   const handleLogout = async () => {
     try {
@@ -119,12 +129,6 @@ export function AdminHeader() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-            >
-              메인으로
-            </Link>
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
               <span className="text-sm font-medium text-foreground">
                 {user?.nickname || user?.username}
@@ -133,10 +137,42 @@ export function AdminHeader() {
             <Button variant="outline" size="sm" onClick={handleLogout}>
               로그아웃
             </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+              onClick={handleGoToMain}
+              title="메인으로 이동"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </Button>
           </div>
         </div>
       </div>
       </header>
+      
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title="메인 페이지로 이동"
+        description="메인 페이지로 이동하시겠습니까? 관리자 페이지를 벗어나게 됩니다."
+        confirmText="이동"
+        cancelText="취소"
+        onConfirm={handleConfirmGoToMain}
+      />
     </>
   );
 }
