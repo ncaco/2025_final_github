@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 
 export default function AdminPage() {
   return (
-      <div className="container mx-auto py-10">
+      <div className="p-6">
         <div className="space-y-8">
           <div>
             <h1 className="text-4xl font-bold tracking-tight">관리자 페이지</h1>

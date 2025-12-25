@@ -87,9 +87,11 @@ export default function AdminLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <AdminHeader />
+      {/* 헤더가 fixed이므로 여백 추가 */}
+      <div className="h-16" />
       <div className="flex flex-1">
         <AdminSidebar />
-        <main className="flex-1 p-6">
+        <main className="flex-1">
           {children}
         </main>
       </div>

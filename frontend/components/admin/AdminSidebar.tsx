@@ -51,7 +51,6 @@ export function AdminSidebar() {
   return (
     <aside className="w-64 border-r bg-muted/30 min-h-screen">
       <div className="p-6">
-        <h2 className="text-lg font-semibold mb-6">관리자 메뉴</h2>
         <nav className="space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
