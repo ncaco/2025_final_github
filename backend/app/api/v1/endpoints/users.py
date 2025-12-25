@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import CommonUser
-from app.dependencies import get_current_active_user
+from app.dependencies import get_current_active_user, is_admin_user
 from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserDetailResponse
 from app.core.security import get_password_hash
 import uuid
@@ -132,13 +132,14 @@ async def update_user(
     current_user: CommonUser = Depends(get_current_active_user)
 ):
     """사용자 정보 수정"""
-    # 본인 또는 관리자만 수정 가능 (간단한 예시)
+    # 본인 또는 관리자만 수정 가능
     if current_user.user_id != user_id:
-        # TODO: 관리자 권한 체크 추가
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="권한이 없습니다"
-        )
+        # 관리자 권한 체크
+        if not is_admin_user(current_user, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="권한이 없습니다"
+            )
     
     user = db.query(CommonUser).filter(
         CommonUser.user_id == user_id,
@@ -200,11 +201,12 @@ async def delete_user(
     """사용자 삭제 (소프트 삭제)"""
     # 본인 또는 관리자만 삭제 가능
     if current_user.user_id != user_id:
-        # TODO: 관리자 권한 체크 추가
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="권한이 없습니다"
-        )
+        # 관리자 권한 체크
+        if not is_admin_user(current_user, db):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="권한이 없습니다"
+            )
     
     user = db.query(CommonUser).filter(
         CommonUser.user_id == user_id,

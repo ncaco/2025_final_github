@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import type { User } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,41 +31,7 @@ export function UserTable({
 }: UserTableProps) {
   const headerScrollRef = useRef<HTMLDivElement>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
-  const isScrollingRef = useRef(false);
-
-  // 헤더와 바디 스크롤 동기화
-  useEffect(() => {
-    const headerElement = headerScrollRef.current;
-    const bodyElement = bodyScrollRef.current;
-
-    if (!headerElement || !bodyElement) return;
-
-    const handleHeaderScroll = () => {
-      if (isScrollingRef.current) return;
-      isScrollingRef.current = true;
-      bodyElement.scrollLeft = headerElement.scrollLeft;
-      requestAnimationFrame(() => {
-        isScrollingRef.current = false;
-      });
-    };
-
-    const handleBodyScroll = () => {
-      if (isScrollingRef.current) return;
-      isScrollingRef.current = true;
-      headerElement.scrollLeft = bodyElement.scrollLeft;
-      requestAnimationFrame(() => {
-        isScrollingRef.current = false;
-      });
-    };
-
-    headerElement.addEventListener('scroll', handleHeaderScroll, { passive: true });
-    bodyElement.addEventListener('scroll', handleBodyScroll, { passive: true });
-
-    return () => {
-      headerElement.removeEventListener('scroll', handleHeaderScroll);
-      bodyElement.removeEventListener('scroll', handleBodyScroll);
-    };
-  }, []);
+  const isScrollingRef = useRef<string | null>(null);
 
   if (loading) {
     return (
@@ -86,7 +52,21 @@ export function UserTable({
   return (
     <div className="rounded-md border flex flex-col h-full">
       {/* 테이블 헤더 (고정) */}
-      <div className="shrink-0 overflow-x-auto" ref={headerScrollRef}>
+      <div 
+        className="shrink-0 overflow-x-auto" 
+        ref={headerScrollRef}
+        onScroll={(e) => {
+          if (isScrollingRef.current === 'body') return;
+          const target = e.currentTarget;
+          if (bodyScrollRef.current) {
+            isScrollingRef.current = 'header';
+            bodyScrollRef.current.scrollLeft = target.scrollLeft;
+            requestAnimationFrame(() => {
+              isScrollingRef.current = null;
+            });
+          }
+        }}
+      >
         <table className="w-full border-collapse table-fixed">
           <colgroup>
             <col className="w-16" />
@@ -118,7 +98,21 @@ export function UserTable({
       </div>
       
       {/* 테이블 바디 (스크롤 가능) */}
-      <div className="flex-1 min-h-0 overflow-auto" ref={bodyScrollRef}>
+      <div 
+        className="flex-1 min-h-0 overflow-auto" 
+        ref={bodyScrollRef}
+        onScroll={(e) => {
+          if (isScrollingRef.current === 'header') return;
+          const target = e.currentTarget;
+          if (headerScrollRef.current) {
+            isScrollingRef.current = 'body';
+            headerScrollRef.current.scrollLeft = target.scrollLeft;
+            requestAnimationFrame(() => {
+              isScrollingRef.current = null;
+            });
+          }
+        }}
+      >
         <table className="w-full border-collapse table-fixed">
           <colgroup>
             <col className="w-16" />

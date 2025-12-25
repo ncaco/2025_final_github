@@ -152,8 +152,23 @@ async function handleResponse<T>(response: Response): Promise<T> {
     );
   }
 
+  // 204 No Content 응답은 본문이 없으므로 빈 객체 반환
+  if (response.status === 204) {
+    return {} as T;
+  }
+
   if (isJson) {
-    return response.json();
+    // 본문이 있는지 확인
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return {} as T;
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      // JSON 파싱 실패 시 빈 객체 반환
+      return {} as T;
+    }
   }
 
   return response.text() as unknown as T;

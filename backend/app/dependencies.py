@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from jose import JWTError
 from app.database import get_db
 from app.models.user import CommonUser
+from app.models.user_role import CommonUserRole
+from app.models.role import CommonRole
 from app.core.security import decode_token
 from app.schemas.auth import TokenData
 
@@ -55,4 +57,23 @@ def get_current_active_user(
             detail="비활성화된 사용자입니다"
         )
     return current_user
+
+
+def is_admin_user(user: CommonUser, db: Session) -> bool:
+    """사용자가 관리자 권한을 가지고 있는지 확인"""
+    from datetime import datetime
+    
+    # 사용자의 활성 역할 중 ADMIN 역할이 있는지 확인 (조인으로 한 번에 조회)
+    admin_role = db.query(CommonUserRole).join(CommonRole).filter(
+        CommonUserRole.user_id == user.user_id,
+        CommonUserRole.use_yn == True,
+        CommonUserRole.del_yn == False,
+        CommonRole.role_cd == "ADMIN",
+        CommonRole.actv_yn == True,
+        CommonRole.del_yn == False,
+        # 만료일시가 없거나 미래인 경우만
+        (CommonUserRole.expr_dt.is_(None)) | (CommonUserRole.expr_dt > datetime.utcnow())
+    ).first()
+    
+    return admin_role is not None
 

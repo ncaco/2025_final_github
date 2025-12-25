@@ -2,7 +2,7 @@
  * 사용자 관련 API 함수
  */
 
-import { get } from './client';
+import { get, put, del } from './client';
 import type { User, UserDetailResponse } from '@/types/user';
 
 /**

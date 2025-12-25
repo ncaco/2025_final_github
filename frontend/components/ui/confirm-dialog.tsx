@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils/cn';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -60,7 +61,10 @@ export function ConfirmDialog({
           <Button
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={handleConfirm}
-            className="w-full sm:w-auto"
+            className={cn(
+              "w-full sm:w-auto",
+              variant === 'destructive' && "bg-red-600 hover:bg-red-700 text-white border-red-600"
+            )}
           >
             {confirmText}
           </Button>
