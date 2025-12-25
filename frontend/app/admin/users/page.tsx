@@ -11,27 +11,58 @@ import { UserTable } from '@/components/admin/user/UserTable';
 import { UserDetailModal } from '@/components/admin/user/UserDetailModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/useToast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
-const ITEMS_PER_PAGE = 20;
+const SEARCH_EXPANDED_STORAGE_KEY = 'admin_users_search_expanded';
+const ITEMS_PER_PAGE_STORAGE_KEY = 'admin_users_items_per_page';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchFilters, setSearchFilters] = useState({
+    username: '',
+    eml: '',
+    nm: '',
+    nickname: '',
+    user_id: '',
+  });
+  const [isSearchExpanded, setIsSearchExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(SEARCH_EXPANDED_STORAGE_KEY);
+      return saved === 'true';
+    }
+    return false;
+  });
+  const [itemsPerPage, setItemsPerPage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(ITEMS_PER_PAGE_STORAGE_KEY);
+      return saved ? parseInt(saved, 10) : 10;
+    }
+    return 10;
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { toast } = useToast();
 
-  // 사용자 목록 로드
+  // 검색 박스 접기/펼치기 토글
+  const toggleSearchExpanded = () => {
+    const newValue = !isSearchExpanded;
+    setIsSearchExpanded(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(SEARCH_EXPANDED_STORAGE_KEY, String(newValue));
+    }
+  };
+
+  // 사용자 목록 로드 (전체 목록 가져오기)
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const skip = (currentPage - 1) * ITEMS_PER_PAGE;
-      const allUsers = await getUsers({ skip, limit: ITEMS_PER_PAGE });
+      // 전체 사용자 목록 가져오기 (필터링을 위해)
+      const allUsers = await getUsers({ skip: 0, limit: 1000 });
       setUsers(allUsers);
     } catch (error) {
       console.error('사용자 목록 로드 실패:', error);
@@ -43,7 +74,7 @@ export default function UsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, toast]);
+  }, [toast]);
 
   useEffect(() => {
     loadUsers();
@@ -51,15 +82,31 @@ export default function UsersPage() {
 
   // 검색 필터링
   const filteredUsers = users.filter((user) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      user.username.toLowerCase().includes(term) ||
-      user.eml.toLowerCase().includes(term) ||
-      user.nm?.toLowerCase().includes(term) ||
-      user.nickname?.toLowerCase().includes(term) ||
-      user.user_id.toLowerCase().includes(term)
-    );
+    const filters = searchFilters;
+    
+    // 모든 필터가 비어있으면 전체 표시
+    if (!filters.username && !filters.eml && !filters.nm && !filters.nickname && !filters.user_id) {
+      return true;
+    }
+    
+    // 각 필터 조건 확인 (AND 조건)
+    if (filters.username && !user.username.toLowerCase().includes(filters.username.toLowerCase())) {
+      return false;
+    }
+    if (filters.eml && !user.eml.toLowerCase().includes(filters.eml.toLowerCase())) {
+      return false;
+    }
+    if (filters.nm && !user.nm?.toLowerCase().includes(filters.nm.toLowerCase())) {
+      return false;
+    }
+    if (filters.nickname && !user.nickname?.toLowerCase().includes(filters.nickname.toLowerCase())) {
+      return false;
+    }
+    if (filters.user_id && !user.user_id.toLowerCase().includes(filters.user_id.toLowerCase())) {
+      return false;
+    }
+    
+    return true;
   });
 
   // 사용자 상세 보기
@@ -96,47 +143,230 @@ export default function UsersPage() {
     }
   };
 
+  const handleSearchFilterChange = (field: keyof typeof searchFilters, value: string) => {
+    setSearchFilters((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    // 필터 변경 시 첫 페이지로 리셋
+    setCurrentPage(1);
+  };
+
   return (
     <div className="p-6">
       <div className="space-y-6">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight">사용자 관리</h1>
-            <p className="text-muted-foreground mt-2">
-              시스템에 등록된 사용자 목록을 조회하고 관리할 수 있습니다.
-            </p>
+          <h1 className="text-2xl font-bold tracking-tight">사용자 관리</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleSearchExpanded}
+              title={isSearchExpanded ? '접기' : '펼치기'}
+            >
+              {isSearchExpanded ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m18 15-6-6-6 6" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              )}
+            </Button>
+            <Button onClick={loadUsers} variant="outline" size="icon" title="새로고침">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+            </Button>
           </div>
         </div>
 
-        {/* 검색 및 필터 */}
-        <div className="flex items-center gap-4">
-          <Input
-            placeholder="사용자명, 이메일, 이름, 닉네임으로 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Button onClick={loadUsers} variant="outline">
-            새로고침
-          </Button>
+        {/* 검색 필터 */}
+        <div className="rounded-md border bg-card">
+          <div className="p-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">이름</Label>
+                <Input
+                  placeholder="이름으로 검색..."
+                  value={searchFilters.nm}
+                  onChange={(e) => handleSearchFilterChange('nm', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">사용자명</Label>
+                <Input
+                  placeholder="사용자명으로 검색..."
+                  value={searchFilters.username}
+                  onChange={(e) => handleSearchFilterChange('username', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">이메일</Label>
+                <Input
+                  placeholder="이메일로 검색..."
+                  value={searchFilters.eml}
+                  onChange={(e) => handleSearchFilterChange('eml', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">닉네임</Label>
+                <Input
+                  placeholder="닉네임으로 검색..."
+                  value={searchFilters.nickname}
+                  onChange={(e) => handleSearchFilterChange('nickname', e.target.value)}
+                />
+              </div>
+              {isSearchExpanded && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">사용자 ID</Label>
+                  <Input
+                    placeholder="사용자 ID로 검색..."
+                    value={searchFilters.user_id}
+                    onChange={(e) => handleSearchFilterChange('user_id', e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* 사용자 테이블 */}
         <UserTable
-          users={filteredUsers}
+          users={filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
           loading={loading}
           onViewUser={handleViewUser}
           onDeleteUser={handleDeleteClick}
+          currentPage={currentPage}
+          itemsPerPage={itemsPerPage}
+          totalCount={filteredUsers.length}
         />
 
         {/* 페이지네이션 */}
-        {!loading && filteredUsers.length > 0 && (
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              페이지 {currentPage} / {Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1}
-            </div>
-            <div className="flex gap-2">
+        {!loading && filteredUsers.length > 0 && (() => {
+          const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+          
+          // 페이지 번호 계산 (최대 7개 표시)
+          let startPage: number;
+          let endPage: number;
+          
+          if (totalPages <= 7) {
+            // 전체 페이지가 7개 이하면 모두 표시
+            startPage = 1;
+            endPage = totalPages;
+          } else {
+            // 현재 페이지 주변 7개 표시
+            if (currentPage <= 4) {
+              // 앞쪽에 있을 때: 1~7
+              startPage = 1;
+              endPage = 7;
+            } else if (currentPage >= totalPages - 3) {
+              // 뒤쪽에 있을 때: 마지막 7개
+              startPage = totalPages - 6;
+              endPage = totalPages;
+            } else {
+              // 중간에 있을 때: 현재 페이지 기준 앞뒤 3개씩
+              startPage = currentPage - 3;
+              endPage = currentPage + 3;
+            }
+          }
+          
+          const pageNumbers = [];
+          for (let i = startPage; i <= endPage; i++) {
+            pageNumbers.push(i);
+          }
+
+          const handleItemsPerPageChange = (value: string) => {
+            const newItemsPerPage = parseInt(value, 10);
+            setItemsPerPage(newItemsPerPage);
+            setCurrentPage(1); // 첫 페이지로 리셋
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(ITEMS_PER_PAGE_STORAGE_KEY, String(newItemsPerPage));
+            }
+          };
+
+          return (
+            <div className="flex items-center justify-between gap-4">
+              {/* 왼쪽: 출력 개수 셀렉트 */}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="items-per-page" className="text-sm text-muted-foreground whitespace-nowrap">
+                  출력 개수:
+                </Label>
+                <select
+                  id="items-per-page"
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="10">10</option>
+                  <option value="30">30</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+
+              {/* 가운데: 페이지네이션 */}
+              <div className="flex items-center justify-center gap-2">
+              {/* 맨 처음 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                title="맨 처음"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m11 17-5-5 5-5" />
+                  <path d="m18 17-5-5 5-5" />
+                </svg>
+              </Button>
+              
+              {/* 이전 */}
               <Button
                 variant="outline"
                 size="sm"
@@ -145,17 +375,59 @@ export default function UsersPage() {
               >
                 이전
               </Button>
+
+              {/* 페이지 번호 */}
+              <div className="flex items-center gap-1">
+                {pageNumbers.map((pageNum) => (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="min-w-10"
+                  >
+                    {pageNum}
+                  </Button>
+                ))}
+              </div>
+
+              {/* 다음 */}
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => p + 1)}
-                disabled={filteredUsers.length < ITEMS_PER_PAGE}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
               >
                 다음
               </Button>
+
+              {/* 맨 끝 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                title="맨 끝"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m6 17 5-5-5-5" />
+                  <path d="m13 17 5-5-5-5" />
+                </svg>
+              </Button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 사용자 상세 모달 */}
         {selectedUser && (
