@@ -13,22 +13,27 @@ export function useAuth() {
     user,
     isAuthenticated,
     isLoading,
+    isInitialized,
     setUser,
     setLoading,
     login,
     logout,
     checkAuth,
+    initialize,
   } = useAuthStore();
 
   useEffect(() => {
-    // 컴포넌트 마운트 시 인증 상태 확인
-    checkAuth();
-  }, [checkAuth]);
+    // 초기 인증 확인 (한 번만 실행)
+    if (!isInitialized) {
+      initialize();
+    }
+  }, [isInitialized, initialize]);
 
   return {
     user,
     isAuthenticated,
     isLoading,
+    isInitialized,
     setUser,
     setLoading,
     login,

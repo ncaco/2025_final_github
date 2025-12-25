@@ -15,3 +15,7 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
     username: Optional[str] = None
 
+
+class LogoutRequest(BaseModel):
+    """로그아웃 요청 스키마"""
+    refresh_token: Optional[str] = None

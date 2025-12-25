@@ -4,8 +4,8 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,20 +15,34 @@ import { tokenStorage } from '@/lib/api/client';
 import { useAuthStore } from '@/stores/auth';
 import { getCurrentUser } from '@/lib/api/users';
 import { Loading } from '@/components/common/Loading';
+import { useToast } from '@/hooks/useToast';
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login: setUser } = useAuthStore();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
 
+  // 회원가입 성공 메시지 표시
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      toast({
+        title: '회원가입 성공',
+        description: '회원가입이 완료되었습니다. 로그인해주세요.',
+        variant: 'success',
+      });
+      // URL에서 쿼리 파라미터 제거
+      router.replace('/auth/login');
+    }
+  }, [searchParams, router, toast]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setIsLoading(true);
 
     try {
@@ -44,14 +58,26 @@ export function LoginForm() {
       const user = await getCurrentUser();
       setUser(user);
 
+      // 성공 메시지
+      toast({
+        title: '로그인 성공',
+        description: '로그인되었습니다.',
+        variant: 'success',
+      });
+
       // 홈으로 리다이렉트
       router.push('/');
     } catch (err) {
-      setError(
+      const errorMessage =
         err instanceof Error
           ? err.message
-          : '로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.'
-      );
+          : '로그인에 실패했습니다. 사용자명과 비밀번호를 확인해주세요.';
+      
+      toast({
+        title: '로그인 실패',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -65,11 +91,6 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
           <div className="space-y-2">
             <Label htmlFor="username">사용자명 또는 이메일</Label>
             <Input

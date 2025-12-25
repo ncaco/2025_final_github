@@ -1,10 +1,10 @@
 """리프레시 토큰 모델"""
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Index, func
 from sqlalchemy.orm import relationship
-from app.models.base import BaseModel
+from app.database import Base
 
 
-class CommonRefreshToken(BaseModel):
+class CommonRefreshToken(Base):
     """리프레시 토큰 테이블"""
     __tablename__ = "common_refresh_token"
     
@@ -25,6 +25,28 @@ class CommonRefreshToken(BaseModel):
     
     # 사용 정보
     last_use_dt = Column(DateTime, nullable=True, comment="마지막 사용일시")
+    
+    # 삭제 관련 (BaseModel에서 상속받지 않고 직접 정의)
+    del_dt = Column(DateTime, nullable=True, comment="삭제일시")
+    del_by = Column(String(100), nullable=True, comment="삭제자 ID")
+    del_by_nm = Column(String(100), nullable=True, comment="삭제자 이름")
+    del_yn = Column(Boolean, default=False, nullable=False, comment="삭제여부")
+    
+    # 생성 관련 (BaseModel에서 상속받지 않고 직접 정의)
+    crt_dt = Column(
+        DateTime,
+        default=func.current_timestamp(),
+        nullable=False,
+        comment="생성일시"
+    )
+    crt_by = Column(String(100), nullable=True, comment="생성자 ID")
+    crt_by_nm = Column(String(100), nullable=True, comment="생성자 이름")
+    
+    # 수정 관련 필드는 COMMON_REFRESH_TOKEN 테이블에 없으므로 제외
+    # upd_dt, upd_by, upd_by_nm은 정의하지 않음
+    
+    # 사용여부
+    use_yn = Column(Boolean, default=True, nullable=False, comment="사용여부")
     
     # 관계
     user = relationship("CommonUser", back_populates="refresh_tokens")

@@ -27,7 +27,12 @@ class CommonUser(BaseModel):
     
     # 관계
     oauth_accounts = relationship("CommonOauthAccount", back_populates="user", cascade="all, delete-orphan")
-    user_roles = relationship("CommonUserRole", back_populates="user", cascade="all, delete-orphan")
+    user_roles = relationship(
+        "CommonUserRole", 
+        foreign_keys="[CommonUserRole.user_id]",
+        back_populates="user", 
+        cascade="all, delete-orphan"
+    )
     refresh_tokens = relationship("CommonRefreshToken", back_populates="user", cascade="all, delete-orphan")
     files = relationship("CommonFile", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("CommonAuditLog", back_populates="user")

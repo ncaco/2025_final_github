@@ -13,11 +13,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { register } from '@/lib/api/auth';
 import { validateEmail, validatePassword, validateUsername } from '@/lib/utils/validation';
 import { Loading } from '@/components/common/Loading';
+import { useToast } from '@/hooks/useToast';
 
 export function RegisterForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     eml: '',
     username: '',
@@ -70,10 +71,14 @@ export function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setValidationErrors({});
 
     if (!validateForm()) {
+      toast({
+        title: '입력 오류',
+        description: '입력한 정보를 확인해주세요.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -89,14 +94,26 @@ export function RegisterForm() {
         telno: formData.telno || undefined,
       });
 
+      // 성공 메시지
+      toast({
+        title: '회원가입 성공',
+        description: '회원가입이 완료되었습니다. 로그인해주세요.',
+        variant: 'success',
+      });
+
       // 회원가입 성공 시 로그인 페이지로 리다이렉트
       router.push('/auth/login?registered=true');
     } catch (err) {
-      setError(
+      const errorMessage =
         err instanceof Error
           ? err.message
-          : '회원가입에 실패했습니다. 다시 시도해주세요.'
-      );
+          : '회원가입에 실패했습니다. 다시 시도해주세요.';
+      
+      toast({
+        title: '회원가입 실패',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -110,11 +127,6 @@ export function RegisterForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
           <div className="space-y-2">
             <Label htmlFor="eml">이메일 *</Label>
             <Input

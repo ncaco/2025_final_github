@@ -41,9 +41,10 @@ export async function login(data: LoginRequest): Promise<Token> {
 
 /**
  * 로그아웃
+ * 인증이 필요하므로 skipAuth를 false로 설정 (기본값)
  */
 export async function logout(): Promise<void> {
-  await post('/api/v1/auth/logout', {}, { skipAuth: true });
+  await post('/api/v1/auth/logout', {});
 }
 
 /**
@@ -62,10 +63,11 @@ export async function verifyToken(): Promise<{ valid: boolean }> {
 
 /**
  * 로그아웃 (API 호출)
+ * 인증이 필요하므로 skipAuth를 false로 설정 (기본값)
  */
 export async function logoutApi(): Promise<void> {
   try {
-    await post('/api/v1/auth/logout', {}, { skipAuth: true });
+    await post('/api/v1/auth/logout', {});
   } catch (error) {
     // 로그아웃 실패해도 클라이언트에서는 토큰 삭제
     console.error('Logout API error:', error);

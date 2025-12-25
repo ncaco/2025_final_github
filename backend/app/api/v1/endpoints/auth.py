@@ -1,7 +1,7 @@
 """인증 관련 엔드포인트"""
 from datetime import datetime, timedelta
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated, Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -13,10 +13,13 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_token,
+    verify_token_hash,
 )
 from app.core.config import settings
-from app.schemas.auth import Token
+from app.schemas.auth import Token, LogoutRequest
 from app.schemas.user import UserCreate, UserResponse, UserLogin
+from app.dependencies import get_current_user
 import uuid
 
 router = APIRouter()
@@ -160,9 +163,9 @@ async def login(
     access_token = create_access_token(data={"sub": user.user_id, "username": user.username})
     refresh_token = create_refresh_token(data={"sub": user.user_id})
     
-    # 리프레시 토큰 저장
-    from app.core.security import pwd_context
-    token_hash = pwd_context.hash(refresh_token)
+    # 리프레시 토큰 저장 (해시화)
+    # 리프레시 토큰은 JWT이므로 전용 해시 함수 사용 (SHA256 + bcrypt)
+    token_hash = hash_token(refresh_token)
     refresh_token_id = f"RT_{uuid.uuid4().hex[:8].upper()}"
     
     new_refresh_token = CommonRefreshToken(
@@ -250,8 +253,6 @@ async def refresh_token(
         )
     
     # 리프레시 토큰 확인 (해시로 저장된 토큰과 비교)
-    from app.core.security import pwd_context
-    
     # 저장된 모든 리프레시 토큰 확인
     stored_tokens = db.query(CommonRefreshToken).filter(
         CommonRefreshToken.user_id == user_id,
@@ -262,7 +263,8 @@ async def refresh_token(
     
     stored_token = None
     for token in stored_tokens:
-        if pwd_context.verify(refresh_token, token.token_hash):
+        # 리프레시 토큰은 전용 검증 함수 사용 (SHA256 + bcrypt)
+        if verify_token_hash(refresh_token, token.token_hash):
             stored_token = token
             break
     
@@ -284,4 +286,71 @@ async def refresh_token(
         "refresh_token": refresh_token,
         "token_type": "bearer"
     }
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_200_OK,
+    summary="사용자 로그아웃",
+    description="""
+    사용자를 로그아웃하고 리프레시 토큰을 취소합니다.
+    
+    **요청:**
+    - 인증 헤더에 액세스 토큰이 필요합니다.
+    - 선택적으로 요청 본문에 `refresh_token`을 포함할 수 있습니다.
+      - `refresh_token`이 제공되면 해당 토큰만 취소합니다.
+      - 제공되지 않으면 해당 사용자의 모든 활성 리프레시 토큰을 취소합니다.
+    
+    **로그아웃 과정:**
+    1. 현재 사용자 인증 확인
+    2. 사용자의 리프레시 토큰 조회
+    3. 리프레시 토큰 취소 (rvk_yn=True, rvk_dt=현재시간)
+    
+    **에러:**
+    - 401: 인증되지 않은 사용자
+    
+    **응답:**
+    - 성공 메시지 반환
+    """,
+    response_description="로그아웃 성공 메시지를 반환합니다."
+)
+async def logout(
+    request: Optional[LogoutRequest] = Body(default=None),
+    current_user: CommonUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """사용자 로그아웃"""
+    # 리프레시 토큰이 제공된 경우 해당 토큰만 취소
+    refresh_token = request.refresh_token if request else None
+    if refresh_token:
+        # 토큰 해시 생성
+        token_hash = hash_token(refresh_token)
+        
+        # 해당 토큰 찾기
+        stored_token = db.query(CommonRefreshToken).filter(
+            CommonRefreshToken.user_id == current_user.user_id,
+            CommonRefreshToken.token_hash == token_hash,
+            CommonRefreshToken.rvk_yn == False,
+            CommonRefreshToken.del_yn == False
+        ).first()
+        
+        if stored_token:
+            stored_token.rvk_yn = True
+            stored_token.rvk_dt = datetime.utcnow()
+    else:
+        # 모든 활성 리프레시 토큰 취소
+        active_tokens = db.query(CommonRefreshToken).filter(
+            CommonRefreshToken.user_id == current_user.user_id,
+            CommonRefreshToken.rvk_yn == False,
+            CommonRefreshToken.del_yn == False,
+            CommonRefreshToken.expr_dt > datetime.utcnow()
+        ).all()
+        
+        for token in active_tokens:
+            token.rvk_yn = True
+            token.rvk_dt = datetime.utcnow()
+    
+    db.commit()
+    
+    return {"message": "로그아웃되었습니다"}
 
