@@ -153,7 +153,7 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] p-6">
+    <div className="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] p-6">
           {/* 헤더 및 검색 필터 영역 (고정) */}
           <div className="shrink-0 space-y-4">
             {/* 헤더 */}

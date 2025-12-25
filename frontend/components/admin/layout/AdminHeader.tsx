@@ -76,7 +76,7 @@ export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, is
   return (
     <>
       <header className={cn(
-        "fixed left-0 right-0 z-50 w-full border-b border-border/40 bg-gradient-to-b from-background via-background/95 to-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out",
+        "fixed left-0 right-0 z-50 w-full border-b border-border/40 bg-gradient-to-b from-background via-background/95 to-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 transition-all duration-300 ease-in-out",
         isHeaderOpen ? "top-0" : "-top-16"
       )}>
         <div className="container mx-auto px-6">
@@ -96,7 +96,7 @@ export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, is
                   priority
                 />
               </div>
-              <div className="flex flex-col">
+              <div className="hidden lg:flex flex-col">
                 <div className="flex items-baseline gap-2">
                   <span className="text-lg font-bold text-foreground tracking-tight">
                     2026 Challenge
@@ -150,76 +150,6 @@ export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, is
         </div>
       </div>
       </header>
-      
-      {/* 역 사다리꼴 모양 헤더 토글 버튼 */}
-      <div className={cn(
-        "fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out",
-        isHeaderOpen ? "top-16" : "top-0"
-      )}>
-        {/* 상단 구분선 */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
-        
-        {/* 테두리용 외부 div */}
-        <div
-          className="relative border border-border/40 bg-background/95 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-300 hover:border-primary/50 hover:shadow-[0_2px_6px_rgba(59,130,246,0.15)]"
-          style={{
-            clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
-            width: '56px',
-            height: '24px',
-            marginTop: '2px'
-          }}
-        >
-          {/* 내부 버튼 */}
-          <button
-            onClick={onToggleHeader}
-            className={cn(
-              "absolute inset-[1px] bg-background transition-all duration-300",
-              "hover:bg-primary/5",
-              "active:scale-[0.98] cursor-pointer",
-              "flex items-center justify-center",
-              "group"
-            )}
-            style={{
-              clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)'
-            }}
-            title={isHeaderOpen ? '헤더 접기' : '헤더 펼치기'}
-          >
-            <div className="relative z-10 transition-all duration-300 group-hover:scale-110">
-              {isHeaderOpen ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-foreground/50 group-hover:text-primary transition-colors"
-                >
-                  <path d="m18 15-6-6-6 6" />
-                </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-foreground/50 group-hover:text-primary transition-colors"
-                >
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              )}
-            </div>
-          </button>
-        </div>
-      </div>
       
       <ConfirmDialog
         open={showConfirmDialog}

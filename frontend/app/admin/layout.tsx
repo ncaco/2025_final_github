@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminHeader } from '@/components/admin/layout/AdminHeader';
 import { AdminSidebar } from '@/components/admin/layout/AdminSidebar';
+import { AdminMobileMenu } from '@/components/admin/layout/AdminMobileMenu';
 import { Loading } from '@/components/common/Loading';
 import { useAuth } from '@/hooks/useAuth';
 import { isAdmin } from '@/utils/roles';
@@ -119,33 +120,41 @@ export default function AdminLayout({
     });
   };
 
-  return (
-    <div className={cn(
-      "flex flex-col",
-      isHeaderOpen ? "h-screen overflow-hidden" : "min-h-screen"
-    )}>
-      <AdminHeader 
-        onToggleSidebar={toggleSidebar} 
-        isSidebarOpen={isSidebarOpen}
-        onToggleHeader={toggleHeader}
-        isHeaderOpen={isHeaderOpen}
-      />
-      {/* 헤더가 fixed이므로 여백 추가 (헤더가 열려있을 때만) */}
-      {isHeaderOpen && <div className="h-16 shrink-0" />}
-      <div className={cn(
-        "flex flex-1",
-        isHeaderOpen ? "overflow-hidden" : ""
-      )}>
-        <AdminSidebar isOpen={isSidebarOpen} />
-        <main className={cn(
-          "flex-1",
-          isHeaderOpen ? "overflow-hidden" : "overflow-auto"
+      return (
+        <div className={cn(
+          "flex flex-col",
+          isHeaderOpen ? "h-screen overflow-hidden" : "min-h-screen"
         )}>
-          {children}
-        </main>
-      </div>
-      <Toaster />
-    </div>
-  );
+          <AdminHeader 
+            onToggleSidebar={toggleSidebar} 
+            isSidebarOpen={isSidebarOpen}
+            onToggleHeader={toggleHeader}
+            isHeaderOpen={isHeaderOpen}
+          />
+          {/* 헤더가 fixed이므로 여백 추가 (헤더가 열려있을 때만) */}
+          {isHeaderOpen && <div className="h-16 shrink-0" />}
+          <div className={cn(
+            "flex flex-1 flex-col min-h-0",
+            isHeaderOpen ? "overflow-hidden" : ""
+          )}>
+            <div className="flex flex-1 min-h-0 relative">
+              <AdminSidebar isOpen={isSidebarOpen} onClose={toggleSidebar} onToggle={toggleSidebar} />
+              <main className={cn(
+                "w-full lg:flex-1 min-h-0",
+                isHeaderOpen ? "overflow-hidden" : "overflow-auto"
+              )}>
+                {children}
+              </main>
+            </div>
+            <div className="lg:hidden shrink-0">
+              <AdminMobileMenu 
+                onMenuToggle={toggleSidebar}
+                isSidebarOpen={isSidebarOpen}
+              />
+            </div>
+          </div>
+          <Toaster />
+        </div>
+      );
 }
 

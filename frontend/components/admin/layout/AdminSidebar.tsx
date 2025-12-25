@@ -4,6 +4,7 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
@@ -47,10 +48,23 @@ const navItems: NavItem[] = [
 
 interface AdminSidebarProps {
   isOpen: boolean;
+  onClose?: () => void;
+  onToggle?: () => void;
 }
 
-export function AdminSidebar({ isOpen }: AdminSidebarProps) {
+export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const isActive = (href: string) => {
     if (!pathname) return false;
@@ -67,36 +81,137 @@ export function AdminSidebar({ isOpen }: AdminSidebarProps) {
     return pathname.startsWith(href + '/') || pathname === href;
   };
 
+  // ESC 키로 메뉴 닫기 (모바일만)
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      // 모바일 화면에서만 동작
+      if (window.innerWidth < 1024 && e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   return (
-    <aside
-      className={cn(
-        'border-r bg-muted/30 min-h-screen transition-all duration-300 ease-in-out overflow-hidden',
-        isOpen ? 'w-48' : 'w-0'
+    <>
+      {/* 모바일 오버레이 (바탕 클릭 시 닫기) */}
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-transparent z-40"
+          onClick={onClose}
+        />
       )}
-    >
-      <div className={cn('p-2 transition-opacity duration-300', isOpen ? 'opacity-100' : 'opacity-0')}>
-        <nav className="space-y-0.5">
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
+      <aside
+        className={cn(
+          'transition-all duration-300 ease-in-out overflow-visible',
+          'fixed lg:static left-0 z-50 lg:z-auto',
+          'lg:block lg:min-h-screen',
+          'bg-white',
+          'relative',
+          isOpen ? 'w-48 border-r' : 'w-0 border-0',
+          'shadow-none'
+        )}
+      >
+        <div className={cn('p-2 transition-opacity duration-300', isOpen ? 'opacity-100' : 'opacity-0')}>
+          <nav className="space-y-0.5">
+            {navItems.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                    active
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {item.icon}
+                  <span>{item.title}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+        
+        {/* 사이드바 여닫기 버튼 (세로 가운데) */}
+        {onToggle && (
+          <div
+            className="absolute z-50 transition-all duration-300 ease-in-out"
+            style={{
+              left: isOpen ? '192px' : '0px', // 사이드바 너비에 맞춰 위치 (w-48 = 192px)
+              top: '50%',
+              transform: 'translateY(-50%) translateX(-50%)' // 버튼 중심을 기준으로 위치
+            }}
+          >
+            {/* 구분선 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-20 bg-gradient-to-b from-transparent via-border/60 to-transparent" />
+            
+            {/* 테두리용 외부 div */}
+            <div
+              className="relative border border-border/40 bg-white transition-all duration-300 hover:border-primary/50 rounded-full flex items-center justify-center shadow-none"
+              style={{
+                width: '32px',
+                height: '32px',
+              }}
+            >
+              {/* 내부 버튼 */}
+              <button
+                onClick={onToggle}
                 className={cn(
-                  'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
-                  active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  "w-full h-full bg-white transition-all duration-300 rounded-full",
+                  "hover:bg-primary/5",
+                  "active:scale-[0.98] cursor-pointer",
+                  "flex items-center justify-center",
+                  "group",
+                  "shadow-none"
                 )}
+                title={isOpen ? '사이드바 닫기' : '사이드바 열기'}
               >
-                {item.icon}
-                <span>{item.title}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-    </aside>
+                <div className="relative z-10 transition-all duration-300 group-hover:scale-110">
+                  {isOpen ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-foreground/50 group-hover:text-primary transition-colors"
+                    >
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-foreground/50 group-hover:text-primary transition-colors"
+                    >
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+    </>
   );
 }
 
