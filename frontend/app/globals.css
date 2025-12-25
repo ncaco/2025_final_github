@@ -60,21 +60,46 @@
 @layer base {
   * {
     border-color: hsl(var(--border));
-  }
-body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  }
-  
-  /* 스크롤바 숨김 (스크롤 기능은 유지) */
-  * {
+    /* 스크롤바 숨김 (스크롤 기능은 유지) */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
   }
   
   *::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
+  }
+  
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+    font-size: 0.875rem; /* 14px - 기본 폰트 사이즈 */
+    line-height: 1.5;
+  }
+  
+  /* 테이블 전역 스타일 통일 */
+  table {
+    font-family: inherit;
+    font-size: 0.75rem; /* 12px - 테이블용 작은 폰트 사이즈 */
+    line-height: 1.4;
+  }
+  
+  th, td {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+  }
+  
+  /* 헤더 전역 스타일 */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: inherit;
+    line-height: 1.2;
+  }
+  
+  /* 버튼 및 입력 필드 전역 스타일 */
+  button, input, textarea, select {
+    font-family: inherit;
+    font-size: inherit;
   }
 }
 

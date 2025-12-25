@@ -13,47 +13,36 @@ import { Button } from '@/components/ui/button';
 import { logoutApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/useToast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { cn } from '@/lib/utils/cn';
 
-export function AdminHeader() {
+interface AdminHeaderProps {
+  onToggleSidebar: () => void;
+  isSidebarOpen: boolean;
+  onToggleHeader: () => void;
+  isHeaderOpen: boolean;
+}
+
+export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, isHeaderOpen }: AdminHeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { toast } = useToast();
-  const [isVisible, setIsVisible] = useState(true);
-  const [isTopHovered, setIsTopHovered] = useState(false);
-  const [lastScrollY, setLastScrollY] = useState(0);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+  // 헤더가 열려있을 때 body 스크롤 방지
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
-      const isAtTop = currentScrollY === 0;
-      const isAtBottom = currentScrollY + windowHeight >= documentHeight - 10; // 10px 여유
+    if (isHeaderOpen) {
+      // 헤더가 열려있을 때 body 스크롤 방지
+      document.body.style.overflow = 'hidden';
+    } else {
+      // 헤더가 닫혀있을 때 body 스크롤 복원
+      document.body.style.overflow = '';
+    }
 
-      // 맨 위에 있으면 항상 표시
-      if (isAtTop) {
-        setIsVisible(true);
-      } else if (isAtBottom) {
-        // 맨 아래에 있으면 숨김 (푸터가 보이도록)
-        setIsVisible(false);
-      } else {
-        // 스크롤 방향에 따라 표시/숨김
-        if (currentScrollY < lastScrollY) {
-          // 스크롤 업
-          setIsVisible(true);
-        } else if (currentScrollY > lastScrollY && currentScrollY > 100) {
-          // 스크롤 다운 (100px 이상 스크롤했을 때만 숨김)
-          setIsVisible(false);
-        }
-      }
-
-      setLastScrollY(currentScrollY);
+    // cleanup
+    return () => {
+      document.body.style.overflow = '';
     };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, [isHeaderOpen]);
 
   const handleGoToMain = () => {
     setShowConfirmDialog(true);
@@ -84,70 +73,68 @@ export function AdminHeader() {
     }
   };
 
-  // 상단 호버 시 표시
-  const shouldShow = isVisible || isTopHovered;
-
   return (
     <>
-      {/* 상단 호버 영역 */}
-      <div
-        className="fixed top-0 left-0 right-0 h-4 z-50 bg-transparent"
-        onMouseEnter={() => setIsTopHovered(true)}
-        onMouseLeave={() => setIsTopHovered(false)}
-      />
-      
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-transform duration-300 ease-in-out ${
-          shouldShow ? 'translate-y-0' : '-translate-y-full'
-        }`}
-        onMouseEnter={() => setIsTopHovered(true)}
-        onMouseLeave={() => setIsTopHovered(false)}
-      >
-        <div className="container mx-auto px-4">
+      <header className={cn(
+        "fixed left-0 right-0 z-50 w-full border-b border-border/40 bg-gradient-to-b from-background via-background/95 to-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 shadow-[0_1px_3px_rgba(0,0,0,0.05)] transition-all duration-300 ease-in-out",
+        isHeaderOpen ? "top-0" : "-top-16"
+      )}>
+        <div className="container mx-auto px-6">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
               href="/admin" 
-              className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+              className="flex items-center gap-3 transition-all hover:opacity-90 hover:scale-[1.02]"
             >
-              <Image
-                src="/logo.svg"
-                alt="2026 Challenge Logo"
-                width={32}
-                height={32}
-                className="h-8 w-8"
-                priority
-              />
-              <div className="flex items-baseline gap-2">
-                <span className="text-xl font-bold text-foreground">
-                  2026 Challenge
-                </span>
-                <span className="text-xs font-semibold text-primary/70 uppercase tracking-wider">
-                  Admin
-                </span>
+              <div className="relative">
+                <Image
+                  src="/logo.svg"
+                  alt="2026 Challenge Logo"
+                  width={36}
+                  height={36}
+                  className="h-9 w-9 drop-shadow-sm"
+                  priority
+                />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-lg font-bold text-foreground tracking-tight">
+                    2026 Challenge
+                  </span>
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-[0.15em] px-1.5 py-0.5 rounded bg-primary/10">
+                    Admin
+                  </span>
+                </div>
               </div>
             </Link>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-              <span className="text-sm font-medium text-foreground">
+          
+          <div className="flex items-center gap-2.5">
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-muted/60 to-muted/40 border border-border/50 backdrop-blur-sm">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-sm font-medium text-foreground/90">
                 {user?.nickname || user?.username}
               </span>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLogout}
+              className="border-border/50 hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive transition-colors"
+            >
               로그아웃
             </Button>
             <Button
               variant="outline"
               size="icon"
-              className="h-10 w-10"
+              className="h-9 w-9 border-border/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-colors"
               onClick={handleGoToMain}
               title="메인으로 이동"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -163,6 +150,76 @@ export function AdminHeader() {
         </div>
       </div>
       </header>
+      
+      {/* 역 사다리꼴 모양 헤더 토글 버튼 */}
+      <div className={cn(
+        "fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out",
+        isHeaderOpen ? "top-16" : "top-0"
+      )}>
+        {/* 상단 구분선 */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
+        
+        {/* 테두리용 외부 div */}
+        <div
+          className="relative border border-border/40 bg-background/95 backdrop-blur-sm shadow-[0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)] transition-all duration-300 hover:border-primary/50 hover:shadow-[0_2px_6px_rgba(59,130,246,0.15)]"
+          style={{
+            clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)',
+            width: '56px',
+            height: '24px',
+            marginTop: '2px'
+          }}
+        >
+          {/* 내부 버튼 */}
+          <button
+            onClick={onToggleHeader}
+            className={cn(
+              "absolute inset-[1px] bg-background transition-all duration-300",
+              "hover:bg-primary/5",
+              "active:scale-[0.98] cursor-pointer",
+              "flex items-center justify-center",
+              "group"
+            )}
+            style={{
+              clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)'
+            }}
+            title={isHeaderOpen ? '헤더 접기' : '헤더 펼치기'}
+          >
+            <div className="relative z-10 transition-all duration-300 group-hover:scale-110">
+              {isHeaderOpen ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-foreground/50 group-hover:text-primary transition-colors"
+                >
+                  <path d="m18 15-6-6-6 6" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-foreground/50 group-hover:text-primary transition-colors"
+                >
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              )}
+            </div>
+          </button>
+        </div>
+      </div>
       
       <ConfirmDialog
         open={showConfirmDialog}

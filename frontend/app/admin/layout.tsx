@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { isAdmin } from '@/utils/roles';
 import { useToast } from '@/hooks/useToast';
 import { Toaster } from '@/components/ui/toaster';
+import { cn } from '@/lib/utils/cn';
 
 export default function AdminLayout({
   children,
@@ -25,6 +26,20 @@ export default function AdminLayout({
   const { toast } = useToast();
   const [isAdminUser, setIsAdminUser] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin_sidebar_open');
+      return saved ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
+  const [isHeaderOpen, setIsHeaderOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin_header_open');
+      return saved ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
 
   useEffect(() => {
     const checkAdminPermission = async () => {
@@ -84,14 +99,48 @@ export default function AdminLayout({
     return null;
   }
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev: boolean) => {
+      const newState = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('admin_sidebar_open', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
+  const toggleHeader = () => {
+    setIsHeaderOpen((prev: boolean) => {
+      const newState = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('admin_header_open', JSON.stringify(newState));
+      }
+      return newState;
+    });
+  };
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <AdminHeader />
-      {/* 헤더가 fixed이므로 여백 추가 */}
-      <div className="h-16" />
-      <div className="flex flex-1">
-        <AdminSidebar />
-        <main className="flex-1">
+    <div className={cn(
+      "flex flex-col",
+      isHeaderOpen ? "h-screen overflow-hidden" : "min-h-screen"
+    )}>
+      <AdminHeader 
+        onToggleSidebar={toggleSidebar} 
+        isSidebarOpen={isSidebarOpen}
+        onToggleHeader={toggleHeader}
+        isHeaderOpen={isHeaderOpen}
+      />
+      {/* 헤더가 fixed이므로 여백 추가 (헤더가 열려있을 때만) */}
+      {isHeaderOpen && <div className="h-16 shrink-0" />}
+      <div className={cn(
+        "flex flex-1",
+        isHeaderOpen ? "overflow-hidden" : ""
+      )}>
+        <AdminSidebar isOpen={isSidebarOpen} />
+        <main className={cn(
+          "flex-1",
+          isHeaderOpen ? "overflow-hidden" : "overflow-auto"
+        )}>
           {children}
         </main>
       </div>

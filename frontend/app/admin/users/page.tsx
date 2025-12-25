@@ -153,11 +153,12 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="space-y-6">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">사용자 관리</h1>
+    <div className="flex flex-col h-[calc(100vh-4rem)] p-6">
+          {/* 헤더 및 검색 필터 영역 (고정) */}
+          <div className="shrink-0 space-y-4">
+            {/* 헤더 */}
+            <div className="flex items-center justify-between py-2">
+              <h1 className="text-xl font-bold tracking-tight">사용자 관리</h1>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -218,44 +219,49 @@ export default function UsersPage() {
 
         {/* 검색 필터 */}
         <div className="rounded-md border bg-card">
-          <div className="p-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">이름</Label>
+          <div className="p-3">
+            <div className="grid grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">이름</Label>
                 <Input
+                  className="h-8 text-sm"
                   placeholder="이름으로 검색..."
                   value={searchFilters.nm}
                   onChange={(e) => handleSearchFilterChange('nm', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">사용자명</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">사용자명</Label>
                 <Input
+                  className="h-8 text-sm"
                   placeholder="사용자명으로 검색..."
                   value={searchFilters.username}
                   onChange={(e) => handleSearchFilterChange('username', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">이메일</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">이메일</Label>
                 <Input
+                  className="h-8 text-sm"
                   placeholder="이메일로 검색..."
                   value={searchFilters.eml}
                   onChange={(e) => handleSearchFilterChange('eml', e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">닉네임</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">닉네임</Label>
                 <Input
+                  className="h-8 text-sm"
                   placeholder="닉네임으로 검색..."
                   value={searchFilters.nickname}
                   onChange={(e) => handleSearchFilterChange('nickname', e.target.value)}
                 />
               </div>
               {isSearchExpanded && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">사용자 ID</Label>
+                <div className="space-y-1">
+                  <Label className="text-xs font-medium">사용자 ID</Label>
                   <Input
+                    className="h-8 text-sm"
                     placeholder="사용자 ID로 검색..."
                     value={searchFilters.user_id}
                     onChange={(e) => handleSearchFilterChange('user_id', e.target.value)}
@@ -265,19 +271,24 @@ export default function UsersPage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* 사용자 테이블 */}
-        <UserTable
-          users={filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
-          loading={loading}
-          onViewUser={handleViewUser}
-          onDeleteUser={handleDeleteClick}
-          currentPage={currentPage}
-          itemsPerPage={itemsPerPage}
-          totalCount={filteredUsers.length}
-        />
+      {/* 테이블 영역 (스크롤 가능) */}
+      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 pt-4">
+          <UserTable
+            users={filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)}
+            loading={loading}
+            onViewUser={handleViewUser}
+            onDeleteUser={handleDeleteClick}
+            currentPage={currentPage}
+            itemsPerPage={itemsPerPage}
+            totalCount={filteredUsers.length}
+          />
+        </div>
 
-        {/* 페이지네이션 */}
+        {/* 페이지네이션 (하단 고정) */}
+        <div className="py-4">
         {!loading && filteredUsers.length > 0 && (() => {
           const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
           
@@ -337,6 +348,8 @@ export default function UsersPage() {
                   <option value="30">30</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
+                  <option value="500">500</option>
+                  <option value="1000">1000</option>
                 </select>
               </div>
 
@@ -428,29 +441,30 @@ export default function UsersPage() {
             </div>
           );
         })()}
-
-        {/* 사용자 상세 모달 */}
-        {selectedUser && (
-          <UserDetailModal
-            user={selectedUser}
-            open={isDetailModalOpen}
-            onOpenChange={setIsDetailModalOpen}
-            onUserUpdated={loadUsers}
-          />
-        )}
-
-        {/* 삭제 확인 다이얼로그 */}
-        <ConfirmDialog
-          open={!!userToDelete}
-          onOpenChange={(open) => !open && setUserToDelete(null)}
-          title="사용자 삭제"
-          description={`${userToDelete?.username} (${userToDelete?.eml}) 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
-          confirmText="삭제"
-          cancelText="취소"
-          variant="destructive"
-          onConfirm={handleDeleteConfirm}
-        />
+        </div>
       </div>
+
+      {/* 사용자 상세 모달 */}
+      {selectedUser && (
+        <UserDetailModal
+          user={selectedUser}
+          open={isDetailModalOpen}
+          onOpenChange={setIsDetailModalOpen}
+          onUserUpdated={loadUsers}
+        />
+      )}
+
+      {/* 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={!!userToDelete}
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+        title="사용자 삭제"
+        description={`${userToDelete?.username} (${userToDelete?.eml}) 사용자를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmText="삭제"
+        cancelText="취소"
+        variant="destructive"
+        onConfirm={handleDeleteConfirm}
+      />
     </div>
   );
 }

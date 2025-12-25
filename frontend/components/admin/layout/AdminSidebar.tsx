@@ -45,7 +45,11 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen: boolean;
+}
+
+export function AdminSidebar({ isOpen }: AdminSidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -64,9 +68,14 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside className="w-64 border-r bg-muted/30 min-h-screen">
-      <div className="p-6">
-        <nav className="space-y-1">
+    <aside
+      className={cn(
+        'border-r bg-muted/30 min-h-screen transition-all duration-300 ease-in-out overflow-hidden',
+        isOpen ? 'w-48' : 'w-0'
+      )}
+    >
+      <div className={cn('p-2 transition-opacity duration-300', isOpen ? 'opacity-100' : 'opacity-0')}>
+        <nav className="space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (
@@ -74,7 +83,7 @@ export function AdminSidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
                   active
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
