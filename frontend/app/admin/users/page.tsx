@@ -11,30 +11,17 @@ import { UserTable } from '@/components/admin/user/UserTable';
 import { UserDetailModal } from '@/components/admin/user/UserDetailModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/useToast';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
-const SEARCH_EXPANDED_STORAGE_KEY = 'admin_users_search_expanded';
 const ITEMS_PER_PAGE_STORAGE_KEY = 'admin_users_items_per_page';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchFilters, setSearchFilters] = useState({
-    username: '',
-    eml: '',
-    nm: '',
-    nickname: '',
-    user_id: '',
-  });
-  const [isSearchExpanded, setIsSearchExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(SEARCH_EXPANDED_STORAGE_KEY);
-      return saved === 'true';
-    }
-    return false;
-  });
+  const [selectedSearchColumn, setSelectedSearchColumn] = useState('nm');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(ITEMS_PER_PAGE_STORAGE_KEY);
@@ -48,14 +35,6 @@ export default function UsersPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { toast } = useToast();
 
-  // 검색 박스 접기/펼치기 토글
-  const toggleSearchExpanded = () => {
-    const newValue = !isSearchExpanded;
-    setIsSearchExpanded(newValue);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(SEARCH_EXPANDED_STORAGE_KEY, String(newValue));
-    }
-  };
 
   // 사용자 목록 로드 (전체 목록 가져오기)
   const loadUsers = useCallback(async () => {
@@ -82,31 +61,24 @@ export default function UsersPage() {
 
   // 검색 필터링
   const filteredUsers = users.filter((user) => {
-    const filters = searchFilters;
-    
-    // 모든 필터가 비어있으면 전체 표시
-    if (!filters.username && !filters.eml && !filters.nm && !filters.nickname && !filters.user_id) {
-      return true;
+    if (!searchKeyword) return true;
+
+    const keyword = searchKeyword.toLowerCase();
+
+    switch (selectedSearchColumn) {
+      case 'nm':
+        return user.nm?.toLowerCase().includes(keyword);
+      case 'username':
+        return user.username.toLowerCase().includes(keyword);
+      case 'eml':
+        return user.eml.toLowerCase().includes(keyword);
+      case 'nickname':
+        return user.nickname?.toLowerCase().includes(keyword);
+      case 'user_id':
+        return user.user_id.toLowerCase().includes(keyword);
+      default:
+        return true;
     }
-    
-    // 각 필터 조건 확인 (AND 조건)
-    if (filters.username && !user.username.toLowerCase().includes(filters.username.toLowerCase())) {
-      return false;
-    }
-    if (filters.eml && !user.eml.toLowerCase().includes(filters.eml.toLowerCase())) {
-      return false;
-    }
-    if (filters.nm && !user.nm?.toLowerCase().includes(filters.nm.toLowerCase())) {
-      return false;
-    }
-    if (filters.nickname && !user.nickname?.toLowerCase().includes(filters.nickname.toLowerCase())) {
-      return false;
-    }
-    if (filters.user_id && !user.user_id.toLowerCase().includes(filters.user_id.toLowerCase())) {
-      return false;
-    }
-    
-    return true;
   });
 
   // 사용자 상세 보기
@@ -143,30 +115,19 @@ export default function UsersPage() {
     }
   };
 
-  const handleSearchFilterChange = (field: keyof typeof searchFilters, value: string) => {
-    setSearchFilters((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-    // 필터 변경 시 첫 페이지로 리셋
+  const handleSearchChange = (value: string) => {
+    setSearchKeyword(value);
     setCurrentPage(1);
   };
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-4rem)] p-6">
-          {/* 헤더 및 검색 필터 영역 (고정) */}
-          <div className="shrink-0 space-y-4">
-            {/* 헤더 */}
-            <div className="flex items-center justify-between py-2">
-              <h1 className="text-xl font-bold tracking-tight">사용자 관리</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleSearchExpanded}
-              title={isSearchExpanded ? '접기' : '펼치기'}
-            >
-              {isSearchExpanded ? (
+        <div className="shrink-0 space-y-4">
+          {/* 헤더 */}
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold tracking-tight">사용자 관리</h1>
+            <div className="flex items-center gap-2">
+              <Button onClick={loadUsers} variant="outline" size="icon" title="새로고침">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="20"
@@ -178,100 +139,41 @@ export default function UsersPage() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="m18 15-6-6-6 6" />
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M3 21v-5h5" />
                 </svg>
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              )}
-            </Button>
-            <Button onClick={loadUsers} variant="outline" size="icon" title="새로고침">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M3 21v-5h5" />
-              </svg>
-            </Button>
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {/* 검색 필터 */}
-        <div className="rounded-md border bg-card">
-          <div className="p-3">
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">이름</Label>
+          {/* 검색 필터 */}
+          <div className="rounded-md border bg-card">
+            <div className="p-3">
+              <div className="flex gap-3">
+                <Select value={selectedSearchColumn} onValueChange={setSelectedSearchColumn}>
+                  <SelectTrigger className="w-[180px] h-8 text-sm bg-white">
+                    <SelectValue placeholder="검색 컬럼 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="nm">이름</SelectItem>
+                    <SelectItem value="username">사용자명</SelectItem>
+                    <SelectItem value="eml">이메일</SelectItem>
+                    <SelectItem value="nickname">닉네임</SelectItem>
+                    <SelectItem value="user_id">사용자 ID</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input
                   className="h-8 text-sm"
-                  placeholder="이름으로 검색..."
-                  value={searchFilters.nm}
-                  onChange={(e) => handleSearchFilterChange('nm', e.target.value)}
+                  placeholder="검색어를 입력하세요..."
+                  value={searchKeyword}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">사용자명</Label>
-                <Input
-                  className="h-8 text-sm"
-                  placeholder="사용자명으로 검색..."
-                  value={searchFilters.username}
-                  onChange={(e) => handleSearchFilterChange('username', e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">이메일</Label>
-                <Input
-                  className="h-8 text-sm"
-                  placeholder="이메일로 검색..."
-                  value={searchFilters.eml}
-                  onChange={(e) => handleSearchFilterChange('eml', e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">닉네임</Label>
-                <Input
-                  className="h-8 text-sm"
-                  placeholder="닉네임으로 검색..."
-                  value={searchFilters.nickname}
-                  onChange={(e) => handleSearchFilterChange('nickname', e.target.value)}
-                />
-              </div>
-              {isSearchExpanded && (
-                <div className="space-y-1">
-                  <Label className="text-xs font-medium">사용자 ID</Label>
-                  <Input
-                    className="h-8 text-sm"
-                    placeholder="사용자 ID로 검색..."
-                    value={searchFilters.user_id}
-                    onChange={(e) => handleSearchFilterChange('user_id', e.target.value)}
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
-      </div>
 
       {/* 테이블 영역 (스크롤 가능) */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
@@ -332,12 +234,9 @@ export default function UsersPage() {
           };
 
           return (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 overflow-x-auto whitespace-nowrap">
               {/* 왼쪽: 출력 개수 셀렉트 */}
               <div className="flex items-center gap-2">
-                <Label htmlFor="items-per-page" className="text-sm text-muted-foreground whitespace-nowrap">
-                  출력 개수:
-                </Label>
                 <select
                   id="items-per-page"
                   value={itemsPerPage}
@@ -447,7 +346,7 @@ export default function UsersPage() {
       {/* 사용자 상세 모달 */}
       {selectedUser && (
         <UserDetailModal
-          user={selectedUser}
+          user={selectedUser as User}
           open={isDetailModalOpen}
           onOpenChange={setIsDetailModalOpen}
           onUserUpdated={loadUsers}
