@@ -66,6 +66,27 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // 화면 크기 변경에 따른 사이드바 상태 조정
+  useEffect(() => {
+    if (typeof window === 'undefined' || !onToggle) return;
+
+    const handleResize = () => {
+      const newIsMobile = window.innerWidth < 1024;
+
+      if (isMobile && !newIsMobile && !isOpen) {
+        // 모바일에서 데스크탑으로 전환 + 사이드바 닫혀있으면 열기
+        onToggle();
+      } else if (!isMobile && newIsMobile && isOpen) {
+        // 데스크탑에서 모바일로 전환 + 사이드바 열려있으면 닫기
+        onClose && onClose();
+      }
+      setIsMobile(newIsMobile);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobile, isOpen, onClose, onToggle]);
+
   const isActive = (href: string) => {
     if (!pathname) return false;
     
@@ -111,7 +132,7 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
           'fixed left-0 z-49 bg-white shadow-none',
 
           // Mobile transition for transform
-          'transition-transform duration-300 ease-in-out',
+          // 'transition-transform duration-300 ease-in-out',
 
           // Mobile specific positioning (when open/closed)
           isOpen ? 'translate-x-0' : '-translate-x-full',
@@ -119,7 +140,7 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
 
           // Desktop specific overrides (lg breakpoint and up)
           'lg:static lg:block lg:min-h-screen', // Override fixed for desktop, make it part of flow
-          'lg:transition-all lg:duration-300 lg:ease-in-out', // Desktop transition for width
+          // 'lg:transition-all lg:duration-300 lg:ease-in-out', // Desktop transition for width
           {
             'lg:w-48 lg:border-r': isOpen, // Desktop: open width and border
             'lg:w-0 lg:border-0': !isOpen, // Desktop: closed width and no border
@@ -130,7 +151,7 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
           bottom: isMobile ? '64px' : '0px',
         }}
       >
-        <div className={cn('p-2 transition-opacity duration-300', isOpen ? 'opacity-100' : 'opacity-0')}>
+        <div className={cn('p-2', isOpen ? 'opacity-100' : 'opacity-0', isMobile ? 'transition-none' : 'transition-opacity duration-300')}>
           <nav className="space-y-0.5">
             {navItems.map((item) => {
               const active = isActive(item.href);
