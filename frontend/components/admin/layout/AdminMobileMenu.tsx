@@ -60,7 +60,7 @@ export function AdminMobileMenu({ onMenuToggle, isSidebarOpen }: MobileMenuProps
     {
       title: isSidebarOpen ? '메뉴닫기' : '메뉴열기',
       href: '#',
-      onClick: (e) => {
+      onClick: (e: React.MouseEvent) => {
         e.preventDefault();
         onMenuToggle();
       },

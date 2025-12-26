@@ -99,22 +99,36 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
   return (
     <>
       {/* 모바일 오버레이 (바탕 클릭 시 닫기) */}
-      {isOpen && (
+      {isOpen && isMobile && (
         <div
-          className="lg:hidden fixed inset-0 bg-transparent z-40"
+          className="fixed inset-0  z-40"
           onClick={onClose}
         />
       )}
       <aside
         className={cn(
-          'transition-all duration-300 ease-in-out overflow-visible',
-          'fixed lg:static left-0 z-50 lg:z-auto',
-          'lg:block lg:min-h-screen',
-          'bg-white',
-          'relative',
-          isOpen ? 'w-48 border-r' : 'w-0 border-0',
-          'shadow-none'
+          // Base styles: fixed, z-index, white background, no shadow
+          'fixed left-0 z-49 bg-white shadow-none',
+
+          // Mobile transition for transform
+          'transition-transform duration-300 ease-in-out',
+
+          // Mobile specific positioning (when open/closed)
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          'w-full', // Occupy full width on mobile, this helps -translate-x-full work as expected
+
+          // Desktop specific overrides (lg breakpoint and up)
+          'lg:static lg:block lg:min-h-screen', // Override fixed for desktop, make it part of flow
+          'lg:transition-all lg:duration-300 lg:ease-in-out', // Desktop transition for width
+          {
+            'lg:w-48 lg:border-r': isOpen, // Desktop: open width and border
+            'lg:w-0 lg:border-0': !isOpen, // Desktop: closed width and no border
+          }
         )}
+        style={{
+          top: isMobile ? '64px' : '0px',
+          bottom: isMobile ? '64px' : '0px',
+        }}
       >
         <div className={cn('p-2 transition-opacity duration-300', isOpen ? 'opacity-100' : 'opacity-0')}>
           <nav className="space-y-0.5">
@@ -140,7 +154,7 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
         </div>
         
         {/* 사이드바 여닫기 버튼 (세로 가운데) */}
-        {onToggle && (
+        {onToggle && !isMobile && (
           <div
             className="absolute z-50 transition-all duration-300 ease-in-out"
             style={{
