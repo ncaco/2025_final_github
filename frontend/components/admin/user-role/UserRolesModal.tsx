@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { User, Role, UserRole } from '@/types/user';
 import {
   Dialog,
@@ -40,6 +40,10 @@ export function UserRolesModal({
 }: UserRolesModalProps) {
   const [isAddingRole, setIsAddingRole] = useState(false);
 
+  useEffect(() => {
+    console.log('🔄 UserRolesModal user prop 업데이트됨 (모달 레벨):', user?.user_id, user?.roles.map(r => r.role_nm));
+  }, [user]);
+
   // 할당되지 않은 역할들
   const availableRoles = allRoles.filter(
     r => !user.roles.some(ur => ur.role_id === r.role_id)
@@ -50,7 +54,9 @@ export function UserRolesModal({
 
     setIsAddingRole(true);
     try {
+      console.log('⏳ 역할 추가 API 호출 중...');
       await onAddRole(user.user_id, roleId);
+      console.log('✅ 역할 추가 성공, onDataUpdated 호출');
       onDataUpdated();
     } catch (error) {
       console.error('역할 추가 실패:', error);

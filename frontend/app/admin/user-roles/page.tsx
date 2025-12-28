@@ -52,6 +52,9 @@ export default function UserRolesPage() {
   const loadUserRolesData = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('📡 사용자별 역할 데이터 로드 시작');
+      console.log('GET Users, Roles, UserRoles API 호출');
+
       // 모든 사용자, 역할, 사용자-역할 매핑을 동시에 가져옴
       const [usersData, rolesData, userRolesData] = await Promise.all([
         getUsers({ skip: 0, limit: 1000 }),
@@ -84,13 +87,13 @@ export default function UserRolesPage() {
           // 특히 roles와 userRoles 배열이 정확히 업데이트되도록 명시적으로 할당
           setSelectedUser({
             ...updatedSelectedUser,
-            roles: [...updatedSelectedUser.roles],
-            userRoles: [...updatedSelectedUser.userRoles],
+            roles: updatedSelectedUser.roles.map(r => ({ ...r })), // 새 배열 참조 생성
+            userRoles: updatedSelectedUser.userRoles.map(ur => ({ ...ur })), // 새 배열 참조 생성
           });
           console.log('🔄 selectedUser 업데이트됨 (명시적 갱신):', updatedSelectedUser.user_id, updatedSelectedUser.roles.map(r => r.role_nm));
         }
       }
-      // console.log('✅ 사용자별 역할 데이터 로드 완료:', usersWithRolesData.map(u => ({ user_id: u.user_id, username: u.username, roles_count: u.roles.length }))); // roles 배열 길이만 출력하여 축약 방지
+      console.log('✅ 사용자별 역할 데이터 로드 완료:', usersWithRolesData.map(u => ({ user_id: u.user_id, username: u.username, roles_count: u.roles.length })));
     } catch (error) {
       console.error('❌ 사용자별 역할 데이터 로드 실패:', error);
       toast({
@@ -106,6 +109,10 @@ export default function UserRolesPage() {
   useEffect(() => {
     loadUserRolesData();
   }, [loadUserRolesData]);
+
+  useEffect(() => {
+    console.log('🔄 selectedUser 업데이트됨 (페이지 레벨):', selectedUser?.user_id, selectedUser?.roles.map(r => r.role_nm));
+  }, [selectedUser]);
 
   // 검색 필터링 (사용자 기준)
   const filteredUsers = usersWithRoles.filter((user) => {
