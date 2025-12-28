@@ -212,3 +212,25 @@ export interface FileUpdate {
   use_yn?: boolean;
 }
 
+export interface RolePermission {
+  common_role_permission_sn: number;
+  role_permission_id: string;
+  role_id: string;
+  permission_id: string;
+  crt_dt: string;
+  use_yn: boolean;
+  role?: {
+    role_nm: string;
+  };
+  permission?: {
+    rsrc: string;
+    act: string;
+    actv_yn: boolean;
+  };
+}
+
+export interface RolePermissionCreate {
+  role_id: string;
+  permission_id: string;
+}
+
