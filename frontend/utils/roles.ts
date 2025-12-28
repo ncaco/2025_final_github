@@ -3,7 +3,7 @@
  */
 
 import { getCurrentUserRoles, getUserRoles } from '@/lib/api/userRoles';
-import { getRole } from '@/lib/api/roles';
+import { getRoleDetail } from '@/lib/api/roles';
 
 /**
  * 사용자가 관리자 역할을 가지고 있는지 확인
@@ -31,7 +31,7 @@ export async function isAdmin(userId?: string): Promise<boolean> {
     const roleChecks = await Promise.all(
       userRoles.map(async (userRole) => {
         try {
-          const role = await getRole(userRole.role_id);
+          const role = await getRoleDetail(userRole.role_id);
           console.log(`역할 ${userRole.role_id}의 role_cd:`, role.role_cd);
           return role.role_cd?.toUpperCase() === 'ADMIN';
         } catch (error) {
@@ -71,8 +71,8 @@ export async function hasRole(roleCode: string, userId?: string): Promise<boolea
     const roleChecks = await Promise.all(
       userRoles.map(async (userRole) => {
         try {
-          const { getRole } = await import('@/lib/api/roles');
-          const role = await getRole(userRole.role_id);
+          const { getRoleDetail } = await import('@/lib/api/roles');
+          const role = await getRoleDetail(userRole.role_id);
           return role.role_cd?.toUpperCase() === roleCode.toUpperCase();
         } catch (error) {
           console.error(`역할 ${userRole.role_id} 조회 중 오류:`, error);

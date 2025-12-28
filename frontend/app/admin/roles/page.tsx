@@ -5,7 +5,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getRoles, createRole, updateRole, deleteRole } from '@/lib/api/users';
+import { getRoles, createRole, updateRole, deleteRole } from '@/lib/api/roles';
 import type { RoleWithPermissions, RoleCreate, RoleUpdate } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

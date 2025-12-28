@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import type { RoleWithPermissions, RoleCreate, RoleUpdate } from '@/types/user';
-import { getRoleDetail, updateRole } from '@/lib/api/users';
+import { getRoleDetail, updateRole } from '@/lib/api/roles';
 import {
   Dialog,
   DialogContent,

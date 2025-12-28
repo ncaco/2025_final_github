@@ -69,11 +69,17 @@ export interface Role {
  * 권한
  */
 export interface Permission {
+  common_permission_sn: number;
   permission_id: string;
+  permission_cd: string;
   permission_nm: string;
-  permission_dc?: string;
-  rsrc?: string;
-  act?: string;
+  dsc?: string;
+  rsrc: string;
+  act: string;
+  actv_yn: boolean;
+  crt_dt: string;
+  upd_dt?: string;
+  use_yn: boolean;
 }
 
 /**
@@ -125,5 +131,29 @@ export interface UserRoleResponse {
   asgn_dt: string;
   expr_dt?: string;
   use_yn: boolean;
+}
+
+/**
+ * 권한 생성 요청
+ */
+export interface PermissionCreate {
+  permission_cd: string;
+  permission_nm: string;
+  dsc?: string;
+  rsrc: string;
+  act: string;
+  actv_yn?: boolean;
+}
+
+/**
+ * 권한 수정 요청
+ */
+export interface PermissionUpdate {
+  permission_cd?: string;
+  permission_nm?: string;
+  dsc?: string;
+  rsrc?: string;
+  act?: string;
+  actv_yn?: boolean;
 }
 
