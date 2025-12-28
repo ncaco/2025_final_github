@@ -41,6 +41,10 @@ const navItems: NavItem[] = [
     href: '/admin/role-permissions',
   },
   {
+    title: '사용자-역할 관리',
+    href: '/admin/user-roles',
+  },
+  {
     title: '감사 로그',
     href: '/admin/audit-logs',
   },

@@ -1,6 +1,7 @@
 """역할 관련 스키마"""
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+from app.schemas.permission import PermissionResponse
 from pydantic import BaseModel, Field
 
 
@@ -32,6 +33,7 @@ class RoleResponse(RoleBase):
     crt_dt: datetime
     upd_dt: Optional[datetime]
     use_yn: bool
+    permissions: List[PermissionResponse] = Field(default_factory=list, description="역할에 할당된 권한 목록")
     
     class Config:
         from_attributes = True

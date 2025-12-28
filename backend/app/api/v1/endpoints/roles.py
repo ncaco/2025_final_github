@@ -1,12 +1,14 @@
 """역할 관련 엔드포인트"""
 from typing import List
+from app.models.role_permission import CommonRolePermission
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.role import CommonRole
 from app.dependencies import get_current_active_user
 from app.models.user import CommonUser
 from app.schemas.role import RoleCreate, RoleUpdate, RoleResponse
+from app.schemas.permission import PermissionResponse
 import uuid
 
 router = APIRouter()
@@ -100,13 +102,23 @@ async def get_roles(
     current_user: CommonUser = Depends(get_current_active_user)
 ):
     """역할 목록 조회"""
-    query = db.query(CommonRole).filter(CommonRole.del_yn == False)
+    query = db.query(CommonRole).options(
+        joinedload(CommonRole.role_permissions).joinedload(CommonRolePermission.permission)
+    ).filter(CommonRole.del_yn == False)
     
     if actv_yn is not None:
         query = query.filter(CommonRole.actv_yn == actv_yn)
     
     roles = query.offset(skip).limit(limit).all()
-    return roles
+    
+    # RoleResponse 스키마에 맞게 permissions 필드 채우기
+    return [
+        RoleResponse(
+            **role.__dict__,
+            permissions=[PermissionResponse(**rp.permission.__dict__) for rp in role.role_permissions if rp.permission and not rp.del_yn]
+        )
+        for role in roles
+    ]
 
 
 @router.get(
@@ -144,7 +156,11 @@ async def get_role(
             detail="역할을 찾을 수 없습니다"
         )
     
-    return role
+    # RoleResponse 스키마에 맞게 permissions 필드 채우기
+    return RoleResponse(
+        **role.__dict__,
+        permissions=[PermissionResponse(**rp.permission.__dict__) for rp in role.role_permissions if rp.permission and not rp.del_yn]
+    )
 
 
 @router.put(
@@ -197,7 +213,18 @@ async def update_role(
     db.commit()
     db.refresh(role)
     
-    return role
+    # 수정된 역할의 최신 정보를 다시 로드하여 반환 (권한 정보 포함)
+    updated_role = db.query(CommonRole).options(
+        joinedload(CommonRole.role_permissions).joinedload(CommonRolePermission.permission)
+    ).filter(
+        CommonRole.role_id == role_id,
+        CommonRole.del_yn == False
+    ).first()
+
+    return RoleResponse(
+        **updated_role.__dict__,
+        permissions=[PermissionResponse(**rp.permission.__dict__) for rp in updated_role.role_permissions if rp.permission and not rp.del_yn]
+    )
 
 
 @router.delete(

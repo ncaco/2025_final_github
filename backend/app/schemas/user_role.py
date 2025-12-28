@@ -1,6 +1,8 @@
 """사용자-역할 매핑 관련 스키마"""
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
+from app.schemas.user import UserResponse
+from app.schemas.role import RoleResponse
 from pydantic import BaseModel, Field
 
 
@@ -33,6 +35,8 @@ class UserRoleResponse(UserRoleBase):
     crt_dt: datetime
     upd_dt: Optional[datetime]
     use_yn: bool
+    user: Optional[UserResponse] = None
+    role: Optional[RoleResponse] = None
     
     class Config:
         from_attributes = True

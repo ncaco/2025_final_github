@@ -153,6 +153,32 @@ async def get_user_roles(
 
 
 @router.get(
+    "/me",
+    response_model=List[UserRoleResponse],
+    summary="현재 사용자의 역할 매핑 목록 조회",
+    description="""
+    현재 로그인된 사용자의 역할 매핑 목록을 조회합니다.
+    
+    **응답:**
+    - 현재 사용자에게 할당된 역할 매핑 목록을 배열로 반환합니다.
+    - 할당된 역할이 없으면 빈 리스트를 반환합니다.
+    """,
+    response_description="현재 사용자의 역할 매핑 목록을 배열로 반환합니다."
+)
+async def get_current_user_roles(
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """현재 사용자의 역할 매핑 목록 조회"""
+    user_roles = db.query(CommonUserRole).filter(
+        CommonUserRole.user_id == current_user.user_id,
+        CommonUserRole.del_yn == False,
+        CommonUserRole.use_yn == True
+    ).all()
+    return user_roles
+
+
+@router.get(
     "/{user_role_id}",
     response_model=UserRoleResponse,
     summary="사용자-역할 매핑 상세 조회",

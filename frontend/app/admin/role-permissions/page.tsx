@@ -54,7 +54,7 @@ export default function RolePermissionsPage() {
   const loadRolePermissionsData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('📡 역할별 권한 데이터 로드 시작');
+      // console.log('📡 역할별 권한 데이터 로드 시작');
 
       // 모든 역할, 권한, 역할-권한 매핑을 동시에 가져옴
       const [rolesData, permissionsData, rolePermissionsData] = await Promise.all([
@@ -79,7 +79,19 @@ export default function RolePermissionsPage() {
 
       setRolesWithPermissions(rolesWithPerms);
       setAllPermissions(permissionsData);
-      console.log('✅ 역할별 권한 데이터 로드 완료:', rolesWithPerms);
+
+      // selectedRole이 현재 열려있는 모달의 역할이라면 최신 데이터로 업데이트
+      if (selectedRole) {
+        const updatedSelectedRole = rolesWithPerms.find(r => r.role_id === selectedRole.role_id);
+        if (updatedSelectedRole) {
+          setSelectedRole({
+            ...updatedSelectedRole,
+            permissions: [...updatedSelectedRole.permissions],
+            rolePermissions: [...updatedSelectedRole.rolePermissions],
+          });
+        }
+      }
+      // console.log('✅ 역할별 권한 데이터 로드 완료:', rolesWithPerms);
     } catch (error) {
       console.error('❌ 역할별 권한 데이터 로드 실패:', error);
       toast({
@@ -247,7 +259,7 @@ export default function RolePermissionsPage() {
 
       {/* 역할별 권한 관리 영역 */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <div className="flex-1 min-h-0 pt-4">
+        <div className="flex-1 min-h-0 overflow-y-auto pt-4">
           {filteredRoles.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               검색 결과가 없습니다.

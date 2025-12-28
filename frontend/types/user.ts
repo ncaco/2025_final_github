@@ -234,3 +234,28 @@ export interface RolePermissionCreate {
   permission_id: string;
 }
 
+export interface UserRole {
+  common_user_role_sn: number;
+  user_role_id: string;
+  user_id: string;
+  role_id: string;
+  asgn_by?: string;
+  asgn_dt?: string;
+  expr_dt?: string;
+  crt_dt: string;
+  use_yn: boolean;
+  user?: {
+    username: string;
+    eml: string;
+  };
+  role?: {
+    role_nm: string;
+  };
+}
+
+export interface UserRoleCreate {
+  user_id: string;
+  role_id: string;
+  expr_dt?: string;
+}
+
