@@ -69,6 +69,7 @@ export async function apiClient<T>(
   const { skipAuth = false, skipRefresh = false, ...fetchOptions } = options;
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  console.log('🌐 API 요청 URL:', url);
 
   // 헤더 설정
   const headers: Record<string, string> = {

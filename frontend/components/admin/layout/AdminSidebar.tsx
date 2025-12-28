@@ -33,12 +33,12 @@ const navItems: NavItem[] = [
     href: '/admin/permissions',
   },
   {
-    title: '감사 로그',
-    href: '/admin/audit-logs',
-  },
-  {
     title: '파일 관리',
     href: '/admin/files',
+  },
+  {
+    title: '감사 로그',
+    href: '/admin/audit-logs',
   },
   {
     title: '시스템 설정',

@@ -157,3 +157,58 @@ export interface PermissionUpdate {
   actv_yn?: boolean;
 }
 
+/**
+ * 감사 로그
+ */
+export interface AuditLog {
+  common_audit_log_sn: number;
+  audit_log_id: string;
+  user_id?: string;
+  act_typ: string;
+  rsrc_typ?: string;
+  rsrc_id?: string;
+  old_val?: unknown;
+  new_val?: unknown;
+  ip_addr?: string;
+  user_agent?: string;
+  req_mthd?: string;
+  req_path?: string;
+  stts_cd?: number;
+  err_msg?: string;
+  crt_dt: string;
+  use_yn: boolean;
+}
+
+export interface File {
+  common_file_sn: number;
+  file_id: string;
+  user_id: string;
+  file_nm: string;
+  file_path: string;
+  file_sz: number;
+  mime_typ?: string;
+  file_ext?: string;
+  stg_typ: string;
+  pub_yn: boolean;
+  crt_dt: string;
+  upd_dt?: string;
+  use_yn: boolean;
+}
+
+export interface FileCreate {
+  user_id: string;
+  file_nm: string;
+  file_path: string;
+  file_sz: number;
+  mime_typ?: string;
+  file_ext?: string;
+  stg_typ?: string;
+  pub_yn?: boolean;
+}
+
+export interface FileUpdate {
+  file_nm?: string;
+  pub_yn?: boolean;
+  use_yn?: boolean;
+}
+
