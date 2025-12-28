@@ -38,8 +38,8 @@ export default function AdminPage() {
                 <CardDescription>역할 생성 및 권한 설정</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="outline" className="w-full" disabled>
-                  역할 관리 (준비 중)
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/admin/roles">역할 목록</Link>
                 </Button>
               </CardContent>
             </Card>
