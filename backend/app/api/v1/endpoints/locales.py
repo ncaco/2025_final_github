@@ -107,7 +107,7 @@ async def create_locale(
 )
 async def get_locales(
     skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
-    limit: int = Query(100, ge=1, le=1000, description="반환할 최대 레코드 수"),
+    limit: int = Query(100, ge=1, le=9999999, description="반환할 최대 레코드 수"),
     lang_cd: Optional[str] = Query(None, description="언어 코드 필터 (예: ko, en)"),
     rsrc_typ: Optional[str] = Query(None, description="리소스 타입 필터 (예: LABEL, MESSAGE)"),
     rsrc_key: Optional[str] = Query(None, description="리소스 키 필터"),

@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, users, health, roles, permissions, role_permissions,
     user_roles, oauth_accounts, refresh_tokens, audit_logs,
-    files, locales
+    files, locales, language_configs
 )
 
 api_router = APIRouter()
@@ -20,4 +20,5 @@ api_router.include_router(refresh_tokens.router, prefix="/refresh-tokens", tags=
 api_router.include_router(audit_logs.router, prefix="/audit-logs", tags=["audit-logs"])
 api_router.include_router(files.router, prefix="/files", tags=["files"])
 api_router.include_router(locales.router, prefix="/locales", tags=["locales"])
+api_router.include_router(language_configs.router, prefix="/language-configs", tags=["language-configs"])
 

@@ -259,3 +259,109 @@ export interface UserRoleCreate {
   expr_dt?: string;
 }
 
+// 언어 설정 타입
+export interface LanguageConfig {
+  common_language_config_sn: number;
+  lang_cd: string;
+  lang_nm: string;
+  display_order: number;
+  use_yn: boolean;
+  del_yn: boolean;
+  crt_dt: string;
+  upd_dt?: string;
+}
+
+export interface LanguageConfigCreate {
+  lang_cd: string;
+  lang_nm: string;
+  display_order?: number;
+  use_yn?: boolean;
+}
+
+export interface LanguageConfigUpdate {
+  lang_nm?: string;
+  display_order?: number;
+  use_yn?: boolean;
+}
+
+// 다국어 관리 타입
+export interface Locale {
+  common_locale_sn: number;
+  locale_id: string;
+  lang_cd: string;
+  rsrc_typ: string;
+  rsrc_key: string;
+  rsrc_val: string;
+  crt_dt: string;
+  upd_dt?: string;
+  use_yn: boolean;
+}
+
+export interface LocaleCreate {
+  lang_cd: string;
+  rsrc_typ: string;
+  rsrc_key: string;
+  rsrc_val: string;
+}
+
+export interface LocaleUpdate {
+  rsrc_val?: string;
+  use_yn?: boolean;
+}
+
+// OAuth 관리 타입
+export interface OauthAccount {
+  common_oauth_account_sn: number;
+  oauth_account_id: string;
+  user_id: string;
+  provider: string;
+  provider_user_id: string;
+  provider_eml?: string;
+  provider_username?: string;
+  token_expr_dt?: string;
+  crt_dt: string;
+  upd_dt?: string;
+  use_yn: boolean;
+}
+
+export interface OauthAccountCreate {
+  user_id: string;
+  provider: string;
+  provider_user_id: string;
+  provider_eml?: string;
+  provider_username?: string;
+  access_token?: string;
+  refresh_token?: string;
+  token_expr_dt?: string;
+}
+
+export interface OauthAccountUpdate {
+  provider_eml?: string;
+  provider_username?: string;
+  access_token?: string;
+  refresh_token?: string;
+  token_expr_dt?: string;
+}
+
+// 리프레시 토큰 관리 타입
+export interface RefreshToken {
+  common_refresh_token_sn: number;
+  refresh_token_id: string;
+  user_id: string;
+  dvc_info?: string;
+  ip_addr?: string;
+  expr_dt: string;
+  rvk_yn: boolean;
+  rvk_dt?: string;
+  last_use_dt?: string;
+  crt_dt: string;
+  use_yn: boolean;
+}
+
+export interface RefreshTokenCreate {
+  user_id: string;
+  expr_dt: string;
+  dvc_info?: string;
+  ip_addr?: string;
+}
+

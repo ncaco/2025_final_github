@@ -183,6 +183,15 @@ ON CONFLICT (LOCALE_ID) DO UPDATE
 -- 초기 데이터 삽입 완료
 -- ============================================
 -- 
+-- ============================================
+-- COMMON_LANGUAGE_CONFIG 초기 데이터
+-- ============================================
+INSERT INTO COMMON_LANGUAGE_CONFIG (LANG_CD, LANG_NM, DISPLAY_ORDER, USE_YN, CRT_BY, CRT_BY_NM) VALUES
+('ko', '한국어', 1, TRUE, 'SYSTEM', '시스템'),
+('en', 'English', 2, TRUE, 'SYSTEM', '시스템'),
+('ja', '日本語', 3, FALSE, 'SYSTEM', '시스템'),
+('zh', '中文', 4, FALSE, 'SYSTEM', '시스템');
+
 -- 참고사항:
 -- 1. 비밀번호는 실제 운영 환경에서 반드시 해시화하여 저장해야 합니다.
 -- 2. 초기 관리자 계정의 비밀번호는 첫 로그인 시 변경하도록 권장합니다.

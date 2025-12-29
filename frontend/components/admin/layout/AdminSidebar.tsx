@@ -11,8 +11,9 @@ import { cn } from '@/lib/utils/cn';
 
 interface NavItem {
   title: string;
-  href: string;
+  href?: string;
   icon?: React.ReactNode;
+  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
@@ -21,36 +22,59 @@ const navItems: NavItem[] = [
     href: '/admin',
   },
   {
-    title: '사용자 관리',
-    href: '/admin/users',
+    title: '사용자/역할/권한 관리',
+    children: [
+      {
+        title: '사용자 관리',
+        href: '/admin/users',
+      },
+      {
+        title: '역할 관리',
+        href: '/admin/roles',
+      },
+      {
+        title: '권한 관리',
+        href: '/admin/permissions',
+      },
+      {
+        title: '역할-권한 관리',
+        href: '/admin/role-permissions',
+      },
+      {
+        title: '사용자-역할 관리',
+        href: '/admin/user-roles',
+      },
+      {
+        title: 'OAuth 관리',
+        href: '/admin/oauth-accounts',
+      },
+    ],
   },
   {
-    title: '역할 관리',
-    href: '/admin/roles',
+    title: '로그 관리',
+    children: [
+      {
+        title: '감사 로그',
+        href: '/admin/audit-logs',
+      },
+    ],
   },
   {
-    title: '권한 관리',
-    href: '/admin/permissions',
-  },
-  {
-    title: '파일 관리',
-    href: '/admin/files',
-  },
-  {
-    title: '역할-권한 관리',
-    href: '/admin/role-permissions',
-  },
-  {
-    title: '사용자-역할 관리',
-    href: '/admin/user-roles',
-  },
-  {
-    title: '감사 로그',
-    href: '/admin/audit-logs',
-  },
-  {
-    title: '시스템 설정',
-    href: '/admin/settings',
+    title: '시스템 관리',
+    children: [
+      {
+        title: '다국어 관리',
+        href: '/admin/locales',
+      },
+      {
+        title: '토큰 관리',
+        href: '/admin/refresh-tokens',
+      },
+      {
+        title: '파일 관리',
+        href: '/admin/files',
+      },
+    ],
   },
 ];
 
@@ -63,6 +87,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['관리']));
 
   useEffect(() => {
     const checkMobile = () => {
@@ -95,19 +120,39 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, [isMobile, isOpen, onClose, onToggle]);
 
+  const toggleMenu = (menuTitle: string) => {
+    setExpandedMenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(menuTitle)) {
+        newSet.delete(menuTitle);
+      } else {
+        newSet.add(menuTitle);
+      }
+      return newSet;
+    });
+  };
+
   const isActive = (href: string) => {
     if (!pathname) return false;
-    
+
     // 정확히 일치하는 경우
     if (pathname === href) return true;
-    
+
     // /admin은 정확히 일치할 때만 active
     if (href === '/admin') {
       return pathname === '/admin';
     }
-    
+
     // 다른 메뉴는 해당 경로로 시작할 때 active
     return pathname.startsWith(href + '/') || pathname === href;
+  };
+
+  const isMenuActive = (item: NavItem): boolean => {
+    if (item.href && isActive(item.href)) return true;
+    if (item.children) {
+      return item.children.some(child => child.href && isActive(child.href));
+    }
+    return false;
   };
 
   // ESC 키로 메뉴 닫기 (모바일만)
@@ -162,22 +207,84 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
         <div className={cn('p-2', isOpen ? 'opacity-100' : 'opacity-0', isMobile ? 'transition-none' : 'transition-opacity duration-300')}>
           <nav className="space-y-0.5">
             {navItems.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
-                    active
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  {item.icon}
-                  <span>{item.title}</span>
-                </Link>
-              );
+              const isExpanded = expandedMenus.has(item.title);
+              const menuActive = isMenuActive(item);
+
+              if (item.children) {
+                // 상위 메뉴 (하위 메뉴가 있는 경우)
+                return (
+                  <div key={item.title}>
+                    <button
+                      onClick={() => toggleMenu(item.title)}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap w-full text-left',
+                        menuActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={cn(
+                          'transition-transform duration-200',
+                          isExpanded ? 'rotate-90' : ''
+                        )}
+                      >
+                        <path d="m9 18 6-6-6-6" />
+                      </svg>
+                      <span>{item.title}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-4 mt-1 space-y-0.5">
+                        {item.children.map((child) => {
+                          const active = child.href && isActive(child.href);
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href || '#'}
+                              className={cn(
+                                'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                                active
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              )}
+                            >
+                              {child.icon}
+                              <span>{child.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              } else {
+                // 일반 메뉴
+                const active = item.href && isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href || '#'}
+                    className={cn(
+                      'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                      active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </Link>
+                );
+              }
             })}
           </nav>
         </div>
