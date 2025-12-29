@@ -5,26 +5,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUserRoles, deleteUserRole, createUserRole } from '@/lib/api/userRoles';
+import { useRouter } from 'next/navigation';
 import { getUsers } from '@/lib/api/users';
-import { getRoles } from '@/lib/api/roles';
-import type { UserRole, User, Role } from '@/types/user';
+import type { User } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { Loading } from '@/components/common/Loading';
-import { UserRolesModal } from '@/components/admin/user-role/UserRolesModal';
 
 const ITEMS_PER_PAGE_STORAGE_KEY = 'admin_user_roles_items_per_page';
 
 export default function UserRolesPage() {
+  const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, isInitialized } = useAuth();
-  const [usersWithRoles, setUsersWithRoles] = useState<(User & { roles: Role[]; userRoles: UserRole[] })[]>([]);
-  const [allRoles, setAllRoles] = useState<Role[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSearchColumn, setSelectedSearchColumn] = useState('username');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -36,9 +33,6 @@ export default function UserRolesPage() {
     return 10;
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<(User & { roles: Role[]; userRoles: UserRole[] }) | null>(null);
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [userRoleToRemove, setUserRoleToRemove] = useState<UserRole | null>(null);
   const { toast } = useToast();
 
   // 검색 옵션
@@ -48,57 +42,17 @@ export default function UserRolesPage() {
     { value: 'eml', label: '이메일' },
   ];
 
-  // 사용자별 역할 데이터 로드
-  const loadUserRolesData = useCallback(async () => {
+  // 사용자 데이터 로드
+  const loadUsersData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('📡 사용자별 역할 데이터 로드 시작');
-      console.log('GET Users, Roles, UserRoles API 호출');
-
-      // 모든 사용자, 역할, 사용자-역할 매핑을 동시에 가져옴
-      const [usersData, rolesData, userRolesData] = await Promise.all([
-        getUsers({ skip: 0, limit: 1000 }),
-        getRoles(),
-        getUserRoles({ skip: 0, limit: 1000 })
-      ]);
-
-      // 사용자를 기준으로 역할 매핑 결합
-      const usersWithRolesData = usersData.map(user => {
-        const userRolesForUser = userRolesData.filter(ur => ur.user_id === user.user_id);
-        const roles = userRolesForUser
-          .map(ur => rolesData.find(r => r.role_id === ur.role_id))
-          .filter(r => r !== undefined) as Role[];
-
-        return {
-          ...user,
-          roles,
-          userRoles: userRolesForUser
-        };
-      });
-
-      setUsersWithRoles(usersWithRolesData);
-      setAllRoles(rolesData);
-
-      // selectedUser가 현재 열려있는 모달의 사용자라면 최신 데이터로 업데이트
-      if (selectedUser) {
-        const updatedSelectedUser = usersWithRolesData.find(u => u.user_id === selectedUser.user_id);
-        if (updatedSelectedUser) {
-          // 새 객체를 생성하여 setSelectedUser 호출 (불변성 유지)
-          // 특히 roles와 userRoles 배열이 정확히 업데이트되도록 명시적으로 할당
-          setSelectedUser({
-            ...updatedSelectedUser,
-            roles: updatedSelectedUser.roles.map(r => ({ ...r })), // 새 배열 참조 생성
-            userRoles: updatedSelectedUser.userRoles.map(ur => ({ ...ur })), // 새 배열 참조 생성
-          });
-          console.log('🔄 selectedUser 업데이트됨 (명시적 갱신):', updatedSelectedUser.user_id, updatedSelectedUser.roles.map(r => r.role_nm));
-        }
-      }
-      console.log('✅ 사용자별 역할 데이터 로드 완료:', usersWithRolesData.map(u => ({ user_id: u.user_id, username: u.username, roles_count: u.roles.length })));
+      const usersData = await getUsers({ skip: 0, limit: 1000 });
+      setUsers(usersData);
     } catch (error) {
-      console.error('❌ 사용자별 역할 데이터 로드 실패:', error);
+      console.error('❌ 사용자 데이터 로드 실패:', error);
       toast({
         title: '오류',
-        description: '사용자별 역할 데이터를 불러오는데 실패했습니다.',
+        description: '사용자 데이터를 불러오는데 실패했습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -107,15 +61,11 @@ export default function UserRolesPage() {
   }, [toast]);
 
   useEffect(() => {
-    loadUserRolesData();
-  }, [loadUserRolesData]);
-
-  useEffect(() => {
-    console.log('🔄 selectedUser 업데이트됨 (페이지 레벨):', selectedUser?.user_id, selectedUser?.roles.map(r => r.role_nm));
-  }, [selectedUser]);
+    loadUsersData();
+  }, [loadUsersData]);
 
   // 검색 필터링 (사용자 기준)
-  const filteredUsers = usersWithRoles.filter((user) => {
+  const filteredUsers = users.filter((user) => {
     if (!searchKeyword) return true;
 
     const keyword = searchKeyword.toLowerCase();
@@ -132,59 +82,11 @@ export default function UserRolesPage() {
     }
   });
 
-  // 사용자 선택하여 모달 열기
-  const handleUserClick = (user: User & { roles: Role[]; userRoles: UserRole[] }) => {
-    setSelectedUser(user);
-    setIsUserModalOpen(true);
+  // 사용자 선택하여 상세 페이지로 이동
+  const handleUserClick = (user: User) => {
+    router.push(`/admin/user-roles/${user.user_id}`);
   };
 
-  // 역할 추가
-  const handleAddRole = async (userId: string, roleId: string) => {
-    try {
-      await createUserRole({ user_id: userId, role_id: roleId });
-      toast({
-        title: '역할 추가 완료',
-        description: '사용자에게 역할이 추가되었습니다.',
-        variant: 'success',
-      });
-      loadUserRolesData();
-    } catch (error) {
-      console.error('역할 추가 실패:', error);
-      toast({
-        title: '역할 추가 실패',
-        description: error instanceof Error ? error.message : '역할 추가에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // 역할 삭제 확인
-  const handleRemoveRoleClick = (userRole: UserRole) => {
-    setUserRoleToRemove(userRole);
-  };
-
-  // 역할 삭제 실행
-  const handleRemoveRoleConfirm = async () => {
-    if (!userRoleToRemove) return;
-
-    try {
-      await deleteUserRole(userRoleToRemove.user_role_id);
-      toast({
-        title: '역할 삭제 완료',
-        description: '사용자에게서 역할이 제거되었습니다.',
-        variant: 'success',
-      });
-      setUserRoleToRemove(null);
-      loadUserRolesData();
-    } catch (error) {
-      console.error('역할 삭제 실패:', error);
-      toast({
-        title: '역할 삭제 실패',
-        description: error instanceof Error ? error.message : '역할 삭제에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleSearchChange = (value: string) => {
     setSearchKeyword(value);
@@ -220,7 +122,7 @@ export default function UserRolesPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold tracking-tight">사용자-역할 관리</h1>
           <div className="flex items-center gap-2">
-            <Button onClick={loadUserRolesData} variant="outline" size="icon" title="새로고침">
+            <Button onClick={loadUsersData} variant="outline" size="icon" title="새로고침">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="20"
@@ -295,7 +197,7 @@ export default function UserRolesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
-                          {user.roles.length}개 역할
+                          역할 관리
                         </Badge>
                         <Badge variant={user.actv_yn ? 'default' : 'secondary'} className="text-xs">
                           {user.actv_yn ? '활성' : '비활성'}
@@ -478,30 +380,6 @@ export default function UserRolesPage() {
         </div>
       </div>
 
-      {/* 사용자별 역할 관리 모달 */}
-      {selectedUser && (
-        <UserRolesModal
-          user={selectedUser}
-          open={isUserModalOpen}
-          onOpenChange={setIsUserModalOpen}
-          allRoles={allRoles}
-          onAddRole={handleAddRole}
-          onRemoveRole={handleRemoveRoleClick}
-          onDataUpdated={loadUserRolesData}
-        />
-      )}
-
-      {/* 역할 삭제 확인 다이얼로그 */}
-      <ConfirmDialog
-        open={!!userRoleToRemove}
-        onOpenChange={(open) => !open && setUserRoleToRemove(null)}
-        title="역할 제거"
-        description={`${userRoleToRemove ? `${selectedUser?.username || userRoleToRemove.user_id} 사용자로부터 역할을 제거하시겠습니까?` : ''}`}
-        confirmText="제거"
-        cancelText="취소"
-        variant="destructive"
-        onConfirm={handleRemoveRoleConfirm}
-      />
     </div>
   );
 }

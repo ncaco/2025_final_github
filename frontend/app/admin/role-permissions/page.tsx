@@ -5,26 +5,23 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getRolePermissions, deleteRolePermission, createRolePermission } from '@/lib/api/rolePermissions';
+import { useRouter } from 'next/navigation';
 import { getRoles } from '@/lib/api/roles';
-import { getPermissions } from '@/lib/api/permissions';
-import type { RolePermission, Role, Permission, RoleWithPermissions } from '@/types/user';
+import type { Role } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/useToast';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { Loading } from '@/components/common/Loading';
-import { RolePermissionsModal } from '@/components/admin/role-permission/RolePermissionsModal';
 
 const ITEMS_PER_PAGE_STORAGE_KEY = 'admin_role_permissions_items_per_page';
 
 export default function RolePermissionsPage() {
+  const router = useRouter();
   const { isAuthenticated, isLoading: authLoading, isInitialized } = useAuth();
-  const [rolesWithPermissions, setRolesWithPermissions] = useState<(Role & { permissions: Permission[]; rolePermissions: RolePermission[] })[]>([]);
-  const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSearchColumn, setSelectedSearchColumn] = useState('role_nm');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -36,67 +33,26 @@ export default function RolePermissionsPage() {
     return 10;
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedRole, setSelectedRole] = useState<(Role & { permissions: Permission[]; rolePermissions: RolePermission[] }) | null>(null);
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-  const [permissionToRemove, setPermissionToRemove] = useState<RolePermission | null>(null);
   const { toast } = useToast();
 
   // 검색 옵션
   const searchOptions = [
     { value: 'role_nm', label: '역할명' },
     { value: 'role_id', label: '역할 ID' },
-    { value: 'rsrc', label: '리소스' },
-    { value: 'act', label: '액션' },
   ];
 
 
-  // 역할별 권한 데이터 로드
-  const loadRolePermissionsData = useCallback(async () => {
+  // 역할 데이터 로드
+  const loadRolesData = useCallback(async () => {
     try {
       setLoading(true);
-      // console.log('📡 역할별 권한 데이터 로드 시작');
-
-      // 모든 역할, 권한, 역할-권한 매핑을 동시에 가져옴
-      const [rolesData, permissionsData, rolePermissionsData] = await Promise.all([
-        getRoles(),
-        getPermissions({ skip: 0, limit: 1000 }),
-        getRolePermissions({ skip: 0, limit: 1000 })
-      ]);
-
-      // 역할을 기준으로 권한 매핑 결합
-      const rolesWithPerms = rolesData.map(role => {
-        const rolePerms = rolePermissionsData.filter(rp => rp.role_id === role.role_id);
-        const permissions = rolePerms
-          .map(rp => permissionsData.find(p => p.permission_id === rp.permission_id))
-          .filter(p => p !== undefined) as Permission[];
-
-        return {
-          ...role,
-          permissions,
-          rolePermissions: rolePerms
-        };
-      });
-
-      setRolesWithPermissions(rolesWithPerms);
-      setAllPermissions(permissionsData);
-
-      // selectedRole이 현재 열려있는 모달의 역할이라면 최신 데이터로 업데이트
-      if (selectedRole) {
-        const updatedSelectedRole = rolesWithPerms.find(r => r.role_id === selectedRole.role_id);
-        if (updatedSelectedRole) {
-          setSelectedRole({
-            ...updatedSelectedRole,
-            permissions: [...updatedSelectedRole.permissions],
-            rolePermissions: [...updatedSelectedRole.rolePermissions],
-          });
-        }
-      }
-      // console.log('✅ 역할별 권한 데이터 로드 완료:', rolesWithPerms);
+      const rolesData = await getRoles();
+      setRoles(rolesData);
     } catch (error) {
-      console.error('❌ 역할별 권한 데이터 로드 실패:', error);
+      console.error('❌ 역할 데이터 로드 실패:', error);
       toast({
         title: '오류',
-        description: '역할별 권한 데이터를 불러오는데 실패했습니다.',
+        description: '역할 데이터를 불러오는데 실패했습니다.',
         variant: 'destructive',
       });
     } finally {
@@ -105,11 +61,11 @@ export default function RolePermissionsPage() {
   }, [toast]);
 
   useEffect(() => {
-    loadRolePermissionsData();
-  }, [loadRolePermissionsData]);
+    loadRolesData();
+  }, [loadRolesData]);
 
   // 검색 필터링 (역할 기준)
-  const filteredRoles = rolesWithPermissions.filter((role) => {
+  const filteredRoles = roles.filter((role) => {
     if (!searchKeyword) return true;
 
     const keyword = searchKeyword.toLowerCase();
@@ -124,59 +80,11 @@ export default function RolePermissionsPage() {
     }
   });
 
-  // 역할 선택하여 모달 열기
-  const handleRoleClick = (role: Role & { permissions: Permission[]; rolePermissions: RolePermission[] }) => {
-    setSelectedRole(role);
-    setIsRoleModalOpen(true);
+  // 역할 선택하여 상세 페이지로 이동
+  const handleRoleClick = (role: Role) => {
+    router.push(`/admin/role-permissions/${role.role_id}`);
   };
 
-  // 권한 추가
-  const handleAddPermission = async (roleId: string, permissionId: string) => {
-    try {
-      await createRolePermission({ role_id: roleId, permission_id: permissionId });
-      toast({
-        title: '권한 추가 완료',
-        description: '역할에 권한이 추가되었습니다.',
-        variant: 'success',
-      });
-      loadRolePermissionsData();
-    } catch (error) {
-      console.error('권한 추가 실패:', error);
-      toast({
-        title: '권한 추가 실패',
-        description: error instanceof Error ? error.message : '권한 추가에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // 권한 삭제 확인
-  const handleRemovePermissionClick = (rolePermission: RolePermission) => {
-    setPermissionToRemove(rolePermission);
-  };
-
-  // 권한 삭제 실행
-  const handleRemovePermissionConfirm = async () => {
-    if (!permissionToRemove) return;
-
-    try {
-      await deleteRolePermission(permissionToRemove.role_permission_id);
-      toast({
-        title: '권한 삭제 완료',
-        description: '역할에서 권한이 제거되었습니다.',
-        variant: 'success',
-      });
-      setPermissionToRemove(null);
-      loadRolePermissionsData();
-    } catch (error) {
-      console.error('권한 삭제 실패:', error);
-      toast({
-        title: '권한 삭제 실패',
-        description: error instanceof Error ? error.message : '권한 삭제에 실패했습니다.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleSearchChange = (value: string) => {
     setSearchKeyword(value);
@@ -211,8 +119,8 @@ export default function RolePermissionsPage() {
           {/* 헤더 */}
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold tracking-tight">역할-권한 관리</h1>
-            <div className="flex items-center gap-2">
-              <Button onClick={loadRolePermissionsData} variant="outline" size="icon" title="새로고침">
+          <div className="flex items-center gap-2">
+            <Button onClick={loadRolesData} variant="outline" size="icon" title="새로고침">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="20"
@@ -283,7 +191,7 @@ export default function RolePermissionsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="text-xs">
-                          {role.permissions.length}개 권한
+                          권한 관리
                         </Badge>
                         <Badge variant="default" className="text-xs">
                           활성
@@ -466,30 +374,6 @@ export default function RolePermissionsPage() {
         </div>
       </div>
 
-      {/* 역할별 권한 관리 모달 */}
-      {selectedRole && (
-        <RolePermissionsModal
-          role={selectedRole}
-          open={isRoleModalOpen}
-          onOpenChange={setIsRoleModalOpen}
-          allPermissions={allPermissions}
-          onAddPermission={handleAddPermission}
-          onRemovePermission={handleRemovePermissionClick}
-          onDataUpdated={loadRolePermissionsData}
-        />
-      )}
-
-      {/* 권한 삭제 확인 다이얼로그 */}
-      <ConfirmDialog
-        open={!!permissionToRemove}
-        onOpenChange={(open) => !open && setPermissionToRemove(null)}
-        title="권한 제거"
-        description={`${permissionToRemove ? `${selectedRole?.role_nm || permissionToRemove.role_id} 역할에서 권한을 제거하시겠습니까?` : ''}`}
-        confirmText="제거"
-        cancelText="취소"
-        variant="destructive"
-        onConfirm={handleRemovePermissionConfirm}
-      />
     </div>
   );
 }

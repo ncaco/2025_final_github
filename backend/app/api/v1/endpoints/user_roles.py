@@ -73,19 +73,27 @@ async def create_user_role(
             detail="역할을 찾을 수 없습니다"
         )
     
-    # 중복 체크
+    # 중복 체크 (del_yn이 False이거나 use_yn이 True인 경우)
     existing = db.query(CommonUserRole).filter(
         CommonUserRole.user_id == user_role_data.user_id,
         CommonUserRole.role_id == user_role_data.role_id,
-        CommonUserRole.del_yn == False,
-        CommonUserRole.use_yn == True
+        CommonUserRole.del_yn == False
     ).first()
-    
+
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미 존재하는 사용자-역할 매핑입니다"
-        )
+        if existing.use_yn:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 존재하는 사용자-역할 매핑입니다"
+            )
+        else:
+            # use_yn이 False인 경우 재활성화
+            existing.use_yn = True
+            existing.upd_by = current_user.user_id
+            existing.upd_by_nm = current_user.username
+            db.commit()
+            db.refresh(existing)
+            return existing
     
     user_role_id = f"UR_{uuid.uuid4().hex[:8].upper()}"
     asgn_by = user_role_data.asgn_by or current_user.user_id
