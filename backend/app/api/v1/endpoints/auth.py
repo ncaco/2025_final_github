@@ -1,7 +1,8 @@
 """인증 관련 엔드포인트"""
 from datetime import datetime, timedelta
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+import re
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -23,6 +24,79 @@ from app.dependencies import get_current_user
 import uuid
 
 router = APIRouter()
+
+
+def get_client_ip(request: Request) -> str:
+    """클라이언트 IP 주소 추출"""
+    # X-Forwarded-For 헤더 확인 (프록시/로드밸런서 뒤에 있는 경우)
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        # 여러 IP가 있을 수 있으므로 첫 번째 IP 사용
+        ip = x_forwarded_for.split(",")[0].strip()
+    else:
+        # 직접 연결인 경우
+        ip = request.client.host if request.client else "unknown"
+
+    # IPv4 주소 검증 및 정리
+    ip = ip.split(":")[0] if ":" in ip else ip  # IPv6에서 IPv4 부분만 추출
+    return ip
+
+
+def parse_user_agent(user_agent: str) -> str:
+    """User-Agent에서 디바이스 정보 파싱"""
+    if not user_agent:
+        return "unknown"
+
+    # 브라우저 정보 추출
+    browsers = {
+        'Chrome': r'Chrome/([\d.]+)',
+        'Firefox': r'Firefox/([\d.]+)',
+        'Safari': r'Safari/([\d.]+)',
+        'Edge': r'Edge/([\d.]+)',
+        'Opera': r'Opera/([\d.]+)',
+        'IE': r'MSIE ([\d.]+)|Trident',
+    }
+
+    # OS 정보 추출
+    os_patterns = {
+        'Windows': r'Windows NT ([\d.]+)',
+        'macOS': r'Mac OS X ([\d._]+)',
+        'Linux': r'Linux',
+        'Android': r'Android ([\d.]+)',
+        'iOS': r'iPhone|iPad|iPod.*OS ([\d_]+)',
+    }
+
+    device_info = []
+
+    # 브라우저 정보
+    for browser, pattern in browsers.items():
+        match = re.search(pattern, user_agent, re.IGNORECASE)
+        if match:
+            version = match.group(1) if len(match.groups()) > 0 else ""
+            device_info.append(f"{browser} {version}".strip())
+            break
+
+    # OS 정보
+    for os_name, pattern in os_patterns.items():
+        match = re.search(pattern, user_agent, re.IGNORECASE)
+        if match:
+            if os_name == 'iOS':
+                version = match.group(1).replace('_', '.') if match.groups() else ""
+                device_info.append(f"{os_name} {version}".strip())
+            elif os_name in ['Windows', 'macOS', 'Android']:
+                version = match.group(1).replace('_', '.') if match.groups() else ""
+                device_info.append(f"{os_name} {version}".strip())
+            else:
+                device_info.append(os_name)
+            break
+
+    # 모바일 디바이스 확인
+    if re.search(r'Mobile|iPhone|iPad|iPod|Android', user_agent, re.IGNORECASE):
+        device_info.append("Mobile")
+    else:
+        device_info.append("Desktop")
+
+    return " | ".join(device_info) if device_info else "unknown"
 
 
 @router.post(
@@ -130,6 +204,7 @@ async def register(
     response_description="액세스 토큰과 리프레시 토큰을 포함한 인증 정보를 반환합니다."
 )
 async def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db)
 ):
@@ -163,15 +238,22 @@ async def login(
     access_token = create_access_token(data={"sub": user.user_id, "username": user.username})
     refresh_token = create_refresh_token(data={"sub": user.user_id})
     
+    # 클라이언트 정보 추출
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("user-agent", "")
+    device_info = parse_user_agent(user_agent)
+
     # 리프레시 토큰 저장 (해시화)
     # 리프레시 토큰은 JWT이므로 전용 해시 함수 사용 (SHA256 + bcrypt)
     token_hash = hash_token(refresh_token)
     refresh_token_id = f"RT_{uuid.uuid4().hex[:8].upper()}"
-    
+
     new_refresh_token = CommonRefreshToken(
         refresh_token_id=refresh_token_id,
         user_id=user.user_id,
         token_hash=token_hash,
+        dvc_info=device_info,  # 디바이스 정보 저장
+        ip_addr=client_ip,     # IP 주소 저장
         expr_dt=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
         crt_by=user.user_id,
         crt_by_nm=user.username or user.user_id
@@ -315,13 +397,19 @@ async def refresh_token(
     response_description="로그아웃 성공 메시지를 반환합니다."
 )
 async def logout(
-    request: Optional[LogoutRequest] = Body(default=None),
+    request: Request,
+    logout_request: Optional[LogoutRequest] = Body(default=None),
     current_user: CommonUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """사용자 로그아웃"""
+    # 클라이언트 정보 추출 (로그아웃한 디바이스 정보)
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("user-agent", "")
+    logout_device_info = parse_user_agent(user_agent)
+
     # 리프레시 토큰이 제공된 경우 해당 토큰만 취소
-    refresh_token = request.refresh_token if request else None
+    refresh_token = logout_request.refresh_token if logout_request else None
     if refresh_token:
         # 토큰 해시 생성
         token_hash = hash_token(refresh_token)
@@ -337,6 +425,8 @@ async def logout(
         if stored_token:
             stored_token.rvk_yn = True
             stored_token.rvk_dt = datetime.utcnow()
+            # TODO: 추후 rvk_ip_addr, rvk_dvc_info 필드 추가하여 취소 디바이스 정보 기록
+            print(f"토큰 취소: 사용자={current_user.user_id}, 토큰ID={stored_token.refresh_token_id}, 취소IP={client_ip}, 취소디바이스={logout_device_info}")
     else:
         # 모든 활성 리프레시 토큰 취소
         active_tokens = db.query(CommonRefreshToken).filter(
@@ -345,10 +435,12 @@ async def logout(
             CommonRefreshToken.del_yn == False,
             CommonRefreshToken.expr_dt > datetime.utcnow()
         ).all()
-        
+
+        print(f"전체 토큰 취소: 사용자={current_user.user_id}, 취소토큰수={len(active_tokens)}, 취소IP={client_ip}, 취소디바이스={logout_device_info}")
         for token in active_tokens:
             token.rvk_yn = True
             token.rvk_dt = datetime.utcnow()
+            # TODO: 추후 rvk_ip_addr, rvk_dvc_info 필드 추가하여 취소 디바이스 정보 기록
     
     db.commit()
     

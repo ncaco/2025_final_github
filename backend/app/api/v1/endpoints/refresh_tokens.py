@@ -91,7 +91,7 @@ async def get_refresh_token(
     return refresh_token
 
 
-@router.post(
+@router.put(
     "/{refresh_token_id}/revoke",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="리프레시 토큰 취소",

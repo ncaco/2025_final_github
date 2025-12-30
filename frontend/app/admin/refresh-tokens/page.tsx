@@ -39,6 +39,21 @@ export default function RefreshTokensPage() {
   const [tokenToRevoke, setTokenToRevoke] = useState<RefreshToken | null>(null);
   const { toast } = useToast();
 
+  // 디바이스 정보 포맷팅
+  const formatDeviceInfo = (dvcInfo: string | null | undefined): string => {
+    if (!dvcInfo || dvcInfo === 'unknown') return '알 수 없음';
+
+    // 디바이스 정보를 파싱하여 간단하게 표시
+    const parts = dvcInfo.split(' | ');
+    if (parts.length >= 2) {
+      const [browser, os] = parts;
+      const deviceType = parts.find(p => p === 'Mobile' || p === 'Desktop') || '';
+      return `${browser} • ${os} ${deviceType ? `(${deviceType})` : ''}`.trim();
+    }
+
+    return dvcInfo.length > 30 ? `${dvcInfo.substring(0, 30)}...` : dvcInfo;
+  };
+
   // 검색 옵션
   const searchOptions = [
     { value: 'user_id', label: '사용자 ID' },
@@ -306,7 +321,10 @@ export default function RefreshTokensPage() {
                           <h3 className="font-medium font-mono text-sm">{token.refresh_token_id}</h3>
                           <p className="text-sm text-muted-foreground">사용자: {token.user_id}</p>
                           <p className="text-xs text-muted-foreground">
-                            IP: {token.ip_addr || 'N/A'} • 디바이스: {token.dvc_info || 'N/A'}
+                            IP: {token.ip_addr || 'N/A'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            디바이스: {formatDeviceInfo(token.dvc_info)}
                           </p>
                         </div>
                       </div>
@@ -316,6 +334,9 @@ export default function RefreshTokensPage() {
                           <div>만료: {new Date(token.expr_dt).toLocaleDateString('ko-KR')}</div>
                           {token.last_use_dt && (
                             <div>최종사용: {new Date(token.last_use_dt).toLocaleDateString('ko-KR')}</div>
+                          )}
+                          {token.rvk_yn && token.rvk_dt && (
+                            <div className="text-red-600">취소: {new Date(token.rvk_dt).toLocaleDateString('ko-KR')}</div>
                           )}
                         </div>
                         <Badge variant={getTokenStatusVariant(token)} className="text-xs">
