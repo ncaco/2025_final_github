@@ -2,6 +2,12 @@
 
 FastAPI 기반 백엔드 API 서버입니다.
 
+## 📚 API 문서
+
+- **[API 문서 바로가기](API_DOCUMENTATION.md)** - 상세한 API 엔드포인트 및 사용법
+- **[Swagger UI](http://localhost:8000/docs)** - 대화형 API 테스트 (서버 실행 시)
+- **[ReDoc](http://localhost:8000/redoc)** - 대안 API 문서 (서버 실행 시)
+
 ## 기술 스택
 
 - **FastAPI**: 고성능 Python 웹 프레임워크

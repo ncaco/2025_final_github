@@ -59,13 +59,16 @@ def get_current_active_user(
     return current_user
 
 
-def is_admin_user(user: CommonUser, db: Session) -> bool:
-    """사용자가 관리자 권한을 가지고 있는지 확인"""
+def is_admin_user(
+    current_user: CommonUser = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+) -> CommonUser:
+    """관리자 권한 확인 및 사용자 반환"""
     from datetime import datetime
-    
+
     # 사용자의 활성 역할 중 ADMIN 역할이 있는지 확인 (조인으로 한 번에 조회)
     admin_role = db.query(CommonUserRole).join(CommonRole).filter(
-        CommonUserRole.user_id == user.user_id,
+        CommonUserRole.user_id == current_user.user_id,
         CommonUserRole.use_yn == True,
         CommonUserRole.del_yn == False,
         CommonRole.role_cd == "ADMIN",
@@ -74,6 +77,12 @@ def is_admin_user(user: CommonUser, db: Session) -> bool:
         # 만료일시가 없거나 미래인 경우만
         (CommonUserRole.expr_dt.is_(None)) | (CommonUserRole.expr_dt > datetime.utcnow())
     ).first()
-    
-    return admin_role is not None
+
+    if not admin_role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자 권한이 필요합니다"
+        )
+
+    return current_user
 

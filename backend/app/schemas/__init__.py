@@ -10,6 +10,16 @@ from app.schemas.refresh_token import RefreshTokenCreate, RefreshTokenResponse
 from app.schemas.audit_log import AuditLogCreate, AuditLogResponse
 from app.schemas.file import FileCreate, FileUpdate, FileResponse
 from app.schemas.locale import LocaleCreate, LocaleUpdate, LocaleResponse
+from app.schemas.board import (
+    BoardCreate, BoardUpdate, BoardResponse, CategoryCreate, CategoryUpdate,
+    CategoryResponse, PostCreate, PostUpdate, PostResponse, PostDetailResponse,
+    PostListRequest, PostListResponse, CommentCreate, CommentUpdate, CommentResponse,
+    LikeRequest, LikeResponse, BookmarkResponse, ReportCreate, ReportResponse,
+    TagCreate, TagUpdate, TagResponse, FollowCreate, FollowResponse,
+    SearchRequest, SearchResponse, BoardStatisticsResponse, PopularPostResponse,
+    UserActivityStatsResponse, UserPreferenceUpdate, UserPreferenceResponse,
+    AttachmentResponse
+)
 
 __all__ = [
     "UserCreate",
@@ -43,5 +53,14 @@ __all__ = [
     "LocaleCreate",
     "LocaleUpdate",
     "LocaleResponse",
+    # 게시판 스키마들
+    "BoardCreate", "BoardUpdate", "BoardResponse", "CategoryCreate", "CategoryUpdate",
+    "CategoryResponse", "PostCreate", "PostUpdate", "PostResponse", "PostDetailResponse",
+    "PostListRequest", "PostListResponse", "CommentCreate", "CommentUpdate", "CommentResponse",
+    "LikeRequest", "LikeResponse", "BookmarkResponse", "ReportCreate", "ReportResponse",
+    "TagCreate", "TagUpdate", "TagResponse", "FollowCreate", "FollowResponse",
+    "SearchRequest", "SearchResponse", "BoardStatisticsResponse", "PopularPostResponse",
+    "UserActivityStatsResponse", "UserPreferenceUpdate", "UserPreferenceResponse",
+    "AttachmentResponse"
 ]
 
