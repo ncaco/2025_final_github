@@ -22,6 +22,77 @@ const navItems: NavItem[] = [
     href: '/admin',
   },
   {
+    title: '게시판 관리',
+    children: [
+      {
+        title: '게시판 목록',
+        href: '/admin/boards',
+      },
+      {
+        title: '카테고리 관리',
+        href: '/admin/categories',
+      },
+      {
+        title: '게시글 관리',
+        href: '/admin/posts',
+      },
+      {
+        title: '댓글 관리',
+        href: '/admin/comments',
+      },
+      {
+        title: '신고 처리',
+        href: '/admin/reports',
+      },
+      {
+        title: '태그 관리',
+        href: '/admin/tags',
+      },
+    ],
+  },
+  {
+    title: '콘텐츠 관리',
+    children: [
+      {
+        title: '게시글 모니터링',
+        href: '/admin/content/posts',
+      },
+      {
+        title: '댓글 모니터링',
+        href: '/admin/content/comments',
+      },
+      {
+        title: '신고 대기',
+        href: '/admin/content/reports',
+      },
+      {
+        title: '검색 로그',
+        href: '/admin/search-logs',
+      },
+    ],
+  },
+  {
+    title: '통계 분석',
+    children: [
+      {
+        title: '대시보드',
+        href: '/admin/statistics/dashboard',
+      },
+      {
+        title: '게시판 통계',
+        href: '/admin/statistics/boards',
+      },
+      {
+        title: '사용자 통계',
+        href: '/admin/statistics/users',
+      },
+      {
+        title: '콘텐츠 통계',
+        href: '/admin/statistics/content',
+      },
+    ],
+  },
+  {
     title: '사용자/역할/권한 관리',
     children: [
       {
@@ -57,6 +128,10 @@ const navItems: NavItem[] = [
         title: '감사 로그',
         href: '/admin/audit-logs',
       },
+      {
+        title: '활동 로그',
+        href: '/admin/activity-logs',
+      },
     ],
   },
   {
@@ -73,6 +148,10 @@ const navItems: NavItem[] = [
       {
         title: '파일 관리',
         href: '/admin/files',
+      },
+      {
+        title: '설정 관리',
+        href: '/admin/settings',
       },
     ],
   },

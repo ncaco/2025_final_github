@@ -68,6 +68,16 @@ export function formatNumber(num: number): string {
 }
 
 /**
+ * 날짜와 시간 포맷팅 (별칭)
+ */
+export function formatDateTime(
+  date: string | Date,
+  format: 'full' | 'date' | 'time' | 'datetime' = 'datetime'
+): string {
+  return formatDate(date, format);
+}
+
+/**
  * 파일 크기 포맷팅
  */
 export function formatFileSize(bytes: number): string {

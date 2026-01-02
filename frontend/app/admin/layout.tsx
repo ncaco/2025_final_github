@@ -143,7 +143,9 @@ export default function AdminLayout({
                 "w-full lg:flex-1 min-h-0",
                 isHeaderOpen ? "overflow-hidden" : "overflow-auto"
               )}>
-                {children}
+                <div className="p-6">
+                  {children}
+                </div>
               </main>
             </div>
             <div className="lg:hidden shrink-0">
