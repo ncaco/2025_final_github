@@ -224,24 +224,21 @@ export default function BoardDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="container mx-auto py-4 sm:py-6 px-4">
-        {/* 뒤로가기 버튼 - 친화적인 위치 */}
-        <div className="mb-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="hover:bg-slate-100/50 rounded-lg"
-          >
-            <Link href="/boards" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span className="text-sm">게시판 목록</span>
-            </Link>
-          </Button>
-        </div>
-
         {/* 콤팩트 헤더 */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-white/20 shadow-lg">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* 뒤로가기 버튼 - 박스 안쪽으로 이동 */}
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
+              className="hover:bg-slate-100/50 rounded-lg shrink-0"
+            >
+              <Link href="/boards" className="flex items-center justify-center w-8 h-8">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+
             {/* 왼쪽: 게시판 정보 */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {(() => {
@@ -294,7 +291,7 @@ export default function BoardDetailPage() {
               })()}
             </div>
 
-            {/* 오른쪽: 글쓰기 버튼 */}
+            {/* 글쓰기 버튼 - 좌측으로 이동 */}
             <Button
               asChild
               size="sm"
@@ -431,19 +428,6 @@ export default function BoardDetailPage() {
             )}
           </>
         )}
-
-        {/* 플로팅 액션 버튼 */}
-        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
-          <Button
-            asChild
-            size="lg"
-            className="h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-          >
-            <Link href={`/boards/${boardId}/create`}>
-              <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-            </Link>
-          </Button>
-        </div>
       </div>
     </div>
   );
