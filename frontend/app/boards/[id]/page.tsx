@@ -38,6 +38,18 @@ export default function BoardDetailPage() {
     }
   }, [boardId]);
 
+  // 페이지 포커스 시 목록 갱신 (삭제 후 돌아왔을 때 자동 갱신)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (boardId && !loading) {
+        loadPosts();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [boardId, loading]);
+
   const loadBoard = async () => {
     try {
       setBoardLoading(true);
@@ -61,6 +73,7 @@ export default function BoardDetailPage() {
       setLoading(true);
       const response = await postApi.getPosts({
         board_id: parseInt(boardId),
+        status: 'PUBLISHED', // 삭제된 게시물 제외를 위해 명시적으로 PUBLISHED만 조회
         page: 1,
         limit: 20,
       });
@@ -78,6 +91,10 @@ export default function BoardDetailPage() {
   };
 
   const filteredPosts = posts.filter((post) => {
+    // 삭제된 게시물 제외
+    if (post.stts === 'DELETED') return false;
+    
+    // 검색 필터
     if (!searchKeyword) return true;
     return (
       post.ttl?.toLowerCase().includes(searchKeyword.toLowerCase()) ||

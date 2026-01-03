@@ -135,13 +135,15 @@ export default function PostDetailPage() {
         description: '게시글이 삭제되었습니다.',
       });
 
+      // 게시판 목록으로 이동 (삭제된 게시물은 자동으로 필터링됨)
       router.push(`/boards/${boardId}`);
+      router.refresh(); // 목록 페이지 강제 갱신
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('게시글 삭제 실패:', error);
       toast({
         title: '오류',
-        description: '게시글 삭제에 실패했습니다.',
+        description: error?.message || '게시글 삭제에 실패했습니다.',
         variant: 'destructive',
       });
     }

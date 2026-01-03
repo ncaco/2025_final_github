@@ -79,6 +79,14 @@ async def get_boards(
 
     boards = query.order_by(BbsBoard.sort_order, BbsBoard.crt_dt.desc()).offset(skip).limit(limit).all()
 
+    # 각 게시판의 실제 게시물 개수 계산 (삭제된 게시물 제외)
+    for board in boards:
+        actual_post_count = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.stts == PostStatus.PUBLISHED  # 삭제된 게시물 제외
+        ).scalar()
+        board.post_count = actual_post_count or 0
+
     return boards
 
 
@@ -103,6 +111,13 @@ async def get_board(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="게시판을 찾을 수 없습니다"
         )
+
+    # 실제 게시물 개수 계산 (삭제된 게시물 제외)
+    actual_post_count = db.query(func.count(BbsPost.id)).filter(
+        BbsPost.board_id == board.id,
+        BbsPost.stts == PostStatus.PUBLISHED  # 삭제된 게시물 제외
+    ).scalar()
+    board.post_count = actual_post_count or 0
 
     return board
 
@@ -244,6 +259,14 @@ async def get_categories_by_board(
         BbsCategory.del_yn == False
     ).order_by(BbsCategory.sort_order, BbsCategory.crt_dt.desc()).all()
 
+    # 각 카테고리의 실제 게시물 개수 계산 (삭제된 게시물 제외)
+    for category in categories:
+        actual_post_count = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.category_id == category.id,
+            BbsPost.stts == PostStatus.PUBLISHED  # 삭제된 게시물 제외
+        ).scalar()
+        category.post_count = actual_post_count or 0
+
     return categories
 
 
@@ -335,7 +358,7 @@ async def get_posts(
     """게시글 목록 조회"""
     offset = (page - 1) * limit
 
-    # 기본 쿼리
+    # 기본 쿼리 - 사용자 화면에서는 삭제된 게시물 제외
     query = db.query(
         BbsPost,
         CommonUser.nickname.label('author_nickname'),
@@ -346,7 +369,8 @@ async def get_posts(
         BbsCategory, BbsPost.category_id == BbsCategory.id
     ).filter(
         BbsPost.board_id == board_id,
-        BbsPost.stts == status
+        BbsPost.stts == status,
+        BbsPost.stts != PostStatus.DELETED  # 삭제된 게시물 항상 제외
     )
 
     # 카테고리 필터
@@ -422,9 +446,18 @@ async def get_post(
             detail="게시글을 찾을 수 없습니다"
         )
 
-    # 조회수 증가
-    post.vw_cnt += 1
-    db.commit()
+    # 삭제된 게시물 접근 제한 (작성자 또는 관리자만 접근 가능)
+    if post.stts == PostStatus.DELETED:
+        if post.user_id != current_user.user_id and not is_admin_user(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="게시글을 찾을 수 없습니다"
+            )
+
+    # 조회수 증가 (삭제된 게시물은 조회수 증가하지 않음)
+    if post.stts != PostStatus.DELETED:
+        post.vw_cnt += 1
+        db.commit()
 
     # 작성자 정보
     author = db.query(CommonUser).filter(CommonUser.user_id == post.user_id).first()
@@ -568,6 +601,13 @@ async def delete_post(
             detail="게시글을 찾을 수 없습니다"
         )
 
+    # 이미 삭제된 게시물인지 확인
+    if post.stts == PostStatus.DELETED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 삭제된 게시글입니다"
+        )
+
     # 권한 확인 (작성자 또는 관리자)
     if post.user_id != current_user.user_id and not is_admin_user(current_user):
         raise HTTPException(
@@ -575,8 +615,22 @@ async def delete_post(
             detail="게시글을 삭제할 권한이 없습니다"
         )
 
-    post.del_yn = True
+    # 삭제 히스토리 저장
+    from app.models.board import BbsPostHistory, ChangeType
+    history = BbsPostHistory(
+        post_id=post.id,
+        user_id=current_user.user_id,
+        prev_ttl=post.ttl,
+        prev_cn=post.cn,
+        change_typ=ChangeType.DELETE,
+        change_rsn="게시글 삭제"
+    )
+    db.add(history)
+
+    # 게시글 상태를 DELETED로 변경
+    post.stts = PostStatus.DELETED
     db.commit()
+    db.refresh(post)
 
     return {"message": "게시글이 삭제되었습니다"}
 
@@ -844,6 +898,7 @@ async def search_posts(
         BbsBoard, BbsPost.board_id == BbsBoard.id
     ).filter(
         BbsPost.stts == PostStatus.PUBLISHED,
+        BbsPost.stts != PostStatus.DELETED,  # 삭제된 게시물 제외
         or_(
             BbsPost.ttl.ilike(f'%{query}%'),
             BbsPost.cn.ilike(f'%{query}%'),
@@ -908,6 +963,7 @@ async def get_popular_posts(
         BbsBoard, BbsPost.board_id == BbsBoard.id
     ).filter(
         BbsPost.stts == PostStatus.PUBLISHED,
+        BbsPost.stts != PostStatus.DELETED  # 삭제된 게시물 제외
     ).order_by(
         (BbsPost.vw_cnt + BbsPost.lk_cnt * 10 + BbsPost.cmt_cnt * 5).desc()
     ).limit(limit).all()

@@ -370,7 +370,7 @@ class BbsBookmark(Base):
     )
 
 
-class BbsReport(BaseModel):
+class BbsReport(Base):
     """신고 테이블"""
     __tablename__ = "bbs_reports"
 
@@ -383,6 +383,7 @@ class BbsReport(BaseModel):
     stts = Column(Enum(ReportStatus), default=ReportStatus.PENDING, comment="신고 상태")
     processed_by = Column(String(100), ForeignKey("common_user.user_id", ondelete="SET NULL"), comment="처리자 ID")
     prcs_dt = Column(DateTime, comment="처리일시")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 인덱스
     __table_args__ = (
@@ -392,7 +393,7 @@ class BbsReport(BaseModel):
     )
 
 
-class BbsNotification(BaseModel):
+class BbsNotification(Base):
     """알림 테이블"""
     __tablename__ = "bbs_notifications"
 
@@ -405,7 +406,8 @@ class BbsNotification(BaseModel):
     related_post_id = Column(BigInteger, ForeignKey("bbs_posts.id", ondelete="CASCADE"), comment="관련 게시글 ID")
     related_comment_id = Column(BigInteger, ForeignKey("bbs_comments.id", ondelete="CASCADE"), comment="관련 댓글 ID")
     related_user_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="SET NULL"), comment="관련 사용자 ID")
-    noti_metadata = Column(JSONB, comment="추가 데이터 (JSON)")
+    meta_data = Column("metadata", JSONB, comment="추가 데이터 (JSON)")  # metadata는 SQLAlchemy 예약어이므로 meta_data로 사용
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     related_post = relationship("BbsPost", back_populates="notifications")
@@ -454,7 +456,7 @@ class BbsPostTag(Base):
     )
 
 
-class BbsFollow(BaseModel):
+class BbsFollow(Base):
     """팔로우 테이블"""
     __tablename__ = "bbs_follows"
 
@@ -462,6 +464,7 @@ class BbsFollow(BaseModel):
     follower_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="팔로워 ID")
     following_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="팔로잉 ID")
     typ = Column(Enum(FollowType), default=FollowType.USER, comment="팔로우 유형")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 제약조건
     __table_args__ = (
@@ -471,7 +474,7 @@ class BbsFollow(BaseModel):
     )
 
 
-class BbsActivityLog(BaseModel):
+class BbsActivityLog(Base):
     """활동 로그 테이블"""
     __tablename__ = "bbs_activity_logs"
 
@@ -483,7 +486,8 @@ class BbsActivityLog(BaseModel):
     target_id = Column(BigInteger, comment="대상 ID")
     ip_addr = Column(INET, comment="IP 주소")
     user_agent = Column(Text, comment="User Agent")
-    noti_metadata = Column(JSONB, comment="추가 데이터 (JSON)")
+    meta_data = Column("metadata", JSONB, comment="추가 데이터 (JSON)")  # metadata는 SQLAlchemy 예약어이므로 meta_data로 사용
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 인덱스
     __table_args__ = (
@@ -492,7 +496,7 @@ class BbsActivityLog(BaseModel):
     )
 
 
-class BbsPostHistory(BaseModel):
+class BbsPostHistory(Base):
     """게시글 히스토리 테이블"""
     __tablename__ = "bbs_post_history"
 
@@ -505,6 +509,7 @@ class BbsPostHistory(BaseModel):
     new_cn = Column(Text, comment="새 내용")
     change_typ = Column(Enum(ChangeType), default=ChangeType.UPDATE, comment="변경 유형")
     change_rsn = Column(Text, comment="변경 사유")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 인덱스
     __table_args__ = (
@@ -512,7 +517,7 @@ class BbsPostHistory(BaseModel):
     )
 
 
-class BbsUserPreference(BaseModel):
+class BbsUserPreference(Base):
     """사용자 설정 테이블"""
     __tablename__ = "bbs_user_preferences"
 
@@ -520,6 +525,7 @@ class BbsUserPreference(BaseModel):
     user_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="사용자 ID")
     pref_key = Column(String(100), nullable=False, comment="설정 키")
     pref_val = Column(Text, comment="설정 값")
+    upd_dt = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=False, comment="수정일시")
 
     # 제약조건
     __table_args__ = (
@@ -528,7 +534,7 @@ class BbsUserPreference(BaseModel):
     )
 
 
-class BbsSearchLog(BaseModel):
+class BbsSearchLog(Base):
     """검색 로그 테이블"""
     __tablename__ = "bbs_search_logs"
 
@@ -538,6 +544,7 @@ class BbsSearchLog(BaseModel):
     search_typ = Column(String(50), comment="검색 유형 (TITLE, CONTENT, AUTHOR, TAG 등)")
     result_cnt = Column(Integer, default=0, comment="결과 수")
     ip_addr = Column(INET, comment="IP 주소")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 인덱스
     __table_args__ = (
@@ -545,7 +552,7 @@ class BbsSearchLog(BaseModel):
     )
 
 
-class BbsAdminLog(BaseModel):
+class BbsAdminLog(Base):
     """관리자 로그 테이블"""
     __tablename__ = "bbs_admin_logs"
 
@@ -558,6 +565,7 @@ class BbsAdminLog(BaseModel):
     old_val = Column(JSONB, comment="이전 값 (JSON)")
     new_val = Column(JSONB, comment="새 값 (JSON)")
     ip_addr = Column(INET, comment="IP 주소")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 인덱스
     __table_args__ = (
