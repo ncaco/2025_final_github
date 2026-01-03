@@ -105,6 +105,9 @@ export interface Post {
   upd_dt?: string;
   author_nickname: string;
   category_nm?: string;
+  tags?: string[];
+  is_liked?: boolean;
+  is_bookmarked?: boolean;
 }
 
 export interface PostCreate {

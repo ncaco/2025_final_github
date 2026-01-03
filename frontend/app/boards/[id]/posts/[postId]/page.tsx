@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { boardApi, postApi, Board, Post, Category } from '@/lib/api/boards';
+import { boardApi, postApi, Board, Post } from '@/lib/api/boards';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
 import {
@@ -21,9 +21,7 @@ import {
   Tag,
   Edit,
   Trash2,
-  ThumbsUp,
-  Paperclip,
-  MoreHorizontal
+  Paperclip
 } from 'lucide-react';
 // 날짜 포맷팅 유틸리티 함수
 const formatDate = (date: Date | string) => {
@@ -102,7 +100,7 @@ export default function PostDetailPage() {
       setPost(prev => prev ? {
         ...prev,
         lk_cnt: response.like_count,
-        // is_liked: response.liked  // API에서 제공된다면 사용
+        is_liked: response.liked,
       } : null);
 
       toast({
@@ -190,7 +188,6 @@ export default function PostDetailPage() {
   }
 
   const isAuthor = user?.user_id === post.user_id;
-  const isPublished = post.stts === 'PUBLISHED';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
@@ -341,7 +338,7 @@ export default function PostDetailPage() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Heart className="h-4 w-4" />
+                    <Heart className={`h-4 w-4 ${post.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
                     <span>{post.lk_cnt.toLocaleString()}개 좋아요</span>
                   </div>
 
@@ -364,9 +361,13 @@ export default function PostDetailPage() {
                   size="sm"
                   onClick={handleLikeToggle}
                   disabled={liking}
-                  className="flex items-center gap-2 hover:bg-red-50 hover:border-red-200"
+                  className={`flex items-center gap-2 ${
+                    post.is_liked 
+                      ? 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100' 
+                      : 'hover:bg-red-50 hover:border-red-200'
+                  }`}
                 >
-                  <Heart className={`h-4 w-4 ${liking ? 'animate-pulse' : ''}`} />
+                  <Heart className={`h-4 w-4 ${post.is_liked ? 'fill-red-500 text-red-500' : ''} ${liking ? 'animate-pulse' : ''}`} />
                   <span>좋아요</span>
                 </Button>
               </div>

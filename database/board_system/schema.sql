@@ -392,9 +392,9 @@ DECLARE
 BEGIN
     -- 좋아요 추가/삭제에 따른 증감 계산
     IF TG_OP = 'INSERT' THEN
-        like_delta := CASE WHEN NEW.type = 'LIKE' THEN 1 ELSE -1 END;
+        like_delta := CASE WHEN NEW.typ = 'LIKE' THEN 1 ELSE -1 END;
     ELSIF TG_OP = 'DELETE' THEN
-        like_delta := CASE WHEN OLD.type = 'LIKE' THEN -1 ELSE 1 END;
+        like_delta := CASE WHEN OLD.typ = 'LIKE' THEN -1 ELSE 1 END;
     END IF;
 
     -- 게시글 좋아요 수 갱신

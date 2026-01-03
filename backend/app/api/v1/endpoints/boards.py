@@ -2,7 +2,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, text
 from app.database import get_db
 from app.models.board import (
     BbsBoard, BbsCategory, BbsPost, BbsComment, BbsAttachment,
@@ -688,7 +688,6 @@ async def get_comments_by_post(
 # 좋아요 엔드포인트
 @router.post(
     "/posts/{post_id}/like",
-    response_model=LikeResponse,
     summary="게시글 좋아요 토글",
     description="게시글에 좋아요를 추가하거나 제거합니다."
 )
@@ -699,6 +698,7 @@ async def toggle_post_like(
     current_user: CommonUser = Depends(get_current_active_user)
 ):
     """게시글 좋아요 토글"""
+    # 기본값 설정
     if like_request is None:
         like_request = LikeRequest()
 
@@ -719,22 +719,54 @@ async def toggle_post_like(
         BbsPostLike.user_id == current_user.user_id
     ).first()
 
-    if existing_like:
-        # 좋아요 취소
-        db.delete(existing_like)
-        db.commit()
-        return {"message": "좋아요가 취소되었습니다"}
-    else:
-        # 좋아요 추가
-        like = BbsPostLike(
-            post_id=post_id,
-            user_id=current_user.user_id,
-            typ=like_request.typ
+    # 트리거가 자동으로 lk_cnt를 업데이트하므로 단순화된 처리
+    try:
+        if existing_like:
+            # 좋아요 취소 - 트리거가 자동으로 lk_cnt 감소
+            db.delete(existing_like)
+            db.commit()
+            
+            # 트리거가 업데이트한 최신 값 조회
+            db.refresh(post)
+            
+            return {
+                "liked": False,
+                "like_count": post.lk_cnt,
+                "like": LikeResponse(
+                    id=existing_like.id,
+                    user_id=existing_like.user_id,
+                    typ=existing_like.typ,
+                    crt_dt=existing_like.crt_dt
+                )
+            }
+        else:
+            # 좋아요 추가 - 트리거가 자동으로 lk_cnt 증가
+            like = BbsPostLike(
+                post_id=post_id,
+                user_id=current_user.user_id,
+                typ=like_request.typ
+            )
+            db.add(like)
+            db.commit()
+            db.refresh(like)
+            db.refresh(post)  # 트리거가 업데이트한 최신 값 조회
+            
+            return {
+                "liked": True,
+                "like_count": post.lk_cnt,
+                "like": LikeResponse(
+                    id=like.id,
+                    user_id=like.user_id,
+                    typ=like.typ,
+                    crt_dt=like.crt_dt
+                )
+            }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"좋아요 처리 실패: {str(e)}"
         )
-        db.add(like)
-        db.commit()
-        db.refresh(like)
-        return like
 
 
 # 북마크 엔드포인트
@@ -896,3 +928,26 @@ async def get_popular_posts(
         result.append(post_dict)
 
     return result
+
+
+# 임시 엔드포인트: DB 함수 및 트리거 업데이트
+@router.post("/admin/update-db-functions", summary="DB 함수 및 트리거 업데이트")
+async def update_db_functions(db: Session = Depends(get_db)):
+    """DB 함수와 트리거를 업데이트합니다 (임시 엔드포인트)"""
+    try:
+        # 트리거 삭제
+        db.execute(text('DROP TRIGGER IF EXISTS trigger_update_post_like_statistics ON bbs_post_likes;'))
+        db.execute(text('DROP TRIGGER IF EXISTS trigger_update_comment_like_statistics ON bbs_comment_likes;'))
+
+        # 함수 삭제 (더 이상 필요 없음)
+        db.execute(text('DROP FUNCTION IF EXISTS update_like_statistics() CASCADE;'))
+
+        db.commit()
+        return {"message": "트리거와 함수가 성공적으로 제거되었습니다."}
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"DB 업데이트 실패: {str(e)}"
+        )
