@@ -28,14 +28,16 @@ export default function Home() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/boards">
+                    게시판 보기
+                  </Link>
+                </Button>
                 <Link href="/profile">
                   <Button variant="outline" className="w-full">
                     프로필 보기
                   </Button>
                 </Link>
-                <Button variant="outline" className="w-full" disabled>
-                  서비스 목록 (준비 중)
-                </Button>
               </div>
             </CardContent>
           </Card>

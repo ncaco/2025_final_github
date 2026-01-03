@@ -322,7 +322,7 @@ export function AdminSidebar({ isOpen, onClose, onToggle }: AdminSidebarProps) {
                       <span>{item.title}</span>
                     </button>
                     {isExpanded && (
-                      <div className="ml-4 mt-1 space-y-0.5">
+                      <div className="ml-4 mt-1 space-y-0.5 bg-white/100 rounded-md p-1">
                         {item.children.map((child) => {
                           const active = child.href && isActive(child.href);
                           return (

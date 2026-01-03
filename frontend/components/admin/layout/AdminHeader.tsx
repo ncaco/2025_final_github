@@ -110,7 +110,7 @@ export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, is
           </div>
           
           <div className="flex items-center gap-2.5">
-            <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-gradient-to-r from-muted/60 to-muted/40 border border-border/50 backdrop-blur-sm">
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white/100 border border-border/50 backdrop-blur-sm">
               <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-sm font-medium text-foreground/90">
                 {user?.nickname || user?.username}
