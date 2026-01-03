@@ -223,189 +223,105 @@ export default function BoardDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
-      <div className="container mx-auto py-8 px-4">
-        {/* 헤더 섹션 */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-8 mb-6 sm:mb-8 border border-white/20 shadow-lg">
-          {/* 뒤로가기 버튼 */}
-          <div className="flex items-center gap-4 mb-6">
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="hover:bg-slate-100/50"
-            >
-              <Link href="/boards">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                게시판 목록으로
-              </Link>
-            </Button>
-          </div>
+      <div className="container mx-auto py-4 sm:py-6 px-4">
+        {/* 뒤로가기 버튼 - 친화적인 위치 */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="hover:bg-slate-100/50 rounded-lg"
+          >
+            <Link href="/boards" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm">게시판 목록</span>
+            </Link>
+          </Button>
+        </div>
 
-          {/* 게시판 정보 */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-start gap-4 mb-4">
-                {(() => {
-                  const config = getBoardConfig(board);
-                  const getBoardEmoji = (type: BoardType) => {
-                    const emojis = {
-                      GENERAL: '💬',
-                      NOTICE: '📢',
-                      QNA: '❓',
-                      IMAGE: '🖼️',
-                      VIDEO: '🎥',
-                    };
-                    return emojis[type] || '📄';
-                  };
-
-                  return (
-                    <>
-                      <div className="text-4xl bg-gradient-to-br from-blue-500 to-blue-600 bg-clip-text text-transparent">
-                        {getBoardEmoji(board.typ)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h1 className="text-3xl lg:text-4xl font-bold text-slate-800">
-                            {board.nm}
-                          </h1>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant={getBoardTypeColor(board.typ)}
-                              className="text-sm px-3 py-1"
-                            >
-                              {getBoardTypeLabel(board.typ)}
-                            </Badge>
-                            {board.actv_yn && (
-                              <div className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                활성
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-slate-600 text-lg mb-3">
-                          {config?.description}
-                        </p>
-                        {board.dsc && (
-                          <p className="text-slate-700 leading-relaxed">
-                            {board.dsc}
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-
-              {/* 게시판 기능 표시 */}
+        {/* 콤팩트 헤더 */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-white/20 shadow-lg">
+          <div className="flex items-center justify-between gap-4">
+            {/* 왼쪽: 게시판 정보 */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {(() => {
-                const config = getBoardConfig(board);
-                if (config?.features) {
-                  return (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {config.features.map((feature, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-sm px-3 py-1 bg-white/50 border-slate-200"
-                        >
-                          {feature}
-                        </Badge>
-                      ))}
+                const getBoardEmoji = (type: BoardType) => {
+                  const emojis = {
+                    GENERAL: '💬',
+                    NOTICE: '📢',
+                    QNA: '❓',
+                    IMAGE: '🖼️',
+                    VIDEO: '🎥',
+                  };
+                  return emojis[type] || '📄';
+                };
+
+                return (
+                  <>
+                    <div className="text-2xl shrink-0">
+                      {getBoardEmoji(board.typ)}
                     </div>
-                  );
-                }
-                return null;
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-800 truncate">
+                          {board.nm}
+                        </h1>
+                        <Badge
+                          variant={getBoardTypeColor(board.typ)}
+                          className="text-xs px-2 py-0.5 shrink-0"
+                        >
+                          {getBoardTypeLabel(board.typ)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-slate-600">
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="h-4 w-4" />
+                          <span className="font-medium">{board.post_count?.toLocaleString() || 0}</span>
+                          <span>게시글</span>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-1">
+                          <Eye className="h-4 w-4" />
+                          <span>총 조회수: 0</span>
+                        </div>
+                        <div className="hidden md:flex items-center gap-1">
+                          <User className="h-4 w-4" />
+                          <span>팔로워: 0</span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
               })()}
             </div>
 
-            {/* 글쓰기 버튼 */}
+            {/* 오른쪽: 글쓰기 버튼 */}
             <Button
               asChild
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+              size="sm"
+              className="shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
             >
-              <Link href={`/boards/${boardId}/create`}>
-                <Plus className="mr-2 h-5 w-5" />
-                글쓰기
+              <Link href={`/boards/${boardId}/create`} className="flex items-center gap-1">
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">글쓰기</span>
               </Link>
             </Button>
           </div>
         </div>
 
-        {/* 통계 카드 */}
-        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
-          {(() => {
-            const config = getBoardConfig(board);
-            const stats = [
-              {
-                title: '총 게시글',
-                value: board.post_count?.toLocaleString() || 0,
-                icon: MessageSquare,
-                gradient: 'from-blue-500 to-blue-600'
-              },
-              {
-                title: '오늘 게시글',
-                value: '0',
-                icon: Calendar,
-                gradient: 'from-green-500 to-green-600'
-              },
-              {
-                title: '총 조회수',
-                value: '0',
-                icon: Eye,
-                gradient: 'from-purple-500 to-purple-600'
-              },
-              {
-                title: '팔로워',
-                value: '0',
-                icon: User,
-                gradient: 'from-orange-500 to-orange-600'
-              }
-            ];
-
-            return stats.map((stat, index) => {
-              const IconComponent = stat.icon;
-              return (
-                <div
-                  key={index}
-                  className="bg-white/90 backdrop-blur-sm rounded-xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-slate-600 mb-1">
-                        {stat.title}
-                      </p>
-                      <p className="text-2xl font-bold text-slate-800">
-                        {stat.value}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} text-white`}>
-                      <IconComponent className="h-6 w-6" />
-                    </div>
-                  </div>
-                </div>
-              );
-            });
-          })()}
-        </div>
-
         {/* 검색 및 필터 바 */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 border border-white/20 shadow-lg">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="flex-1 w-full">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
-                <Input
-                  placeholder="제목이나 내용으로 검색해보세요..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="pl-12 h-12 text-base border-slate-200 bg-white/50 backdrop-blur-sm rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
-                />
-              </div>
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-3 mb-4 sm:mb-6 border border-white/20 shadow-sm">
+          <div className="flex gap-3 items-center">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <Input
+                placeholder="게시글 검색..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                className="pl-9 h-9 text-sm border-slate-200 bg-white/50 rounded-lg focus:ring-1 focus:ring-blue-500/20 focus:border-blue-400"
+              />
             </div>
             <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-40 h-12 bg-white/50 backdrop-blur-sm border-slate-200 rounded-xl">
+              <SelectTrigger className="w-32 h-9 bg-white/50 border-slate-200 rounded-lg text-sm">
                 <SelectValue placeholder="정렬" />
               </SelectTrigger>
               <SelectContent>
@@ -425,11 +341,11 @@ export default function BoardDetailPage() {
         ) : (
           <>
             {filteredPosts.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {filteredPosts.map((post) => (
                   <div
                     key={post.id}
-                    className="group bg-white/90 backdrop-blur-sm rounded-xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                    className="group bg-white/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
                   >
                     <div className="flex items-start gap-4">
                       {/* 게시글 정보 */}
