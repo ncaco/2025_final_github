@@ -377,6 +377,15 @@ async def get_posts(
         post_dict = PostResponse.from_orm(post).dict()
         post_dict['author_nickname'] = author_nickname
         post_dict['category_nm'] = category_nm
+
+        # 태그 정보 조회
+        tags = db.query(BbsTag.nm).join(
+            BbsPostTag, BbsTag.id == BbsPostTag.tag_id
+        ).filter(
+            BbsPostTag.post_id == post.id
+        ).all()
+        post_dict['tags'] = [tag[0] for tag in tags]
+
         post_list.append(PostResponse(**post_dict))
 
     total_pages = (total_count + limit - 1) // limit

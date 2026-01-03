@@ -83,6 +83,54 @@ export interface CategoryUpdate {
   actv_yn?: boolean;
 }
 
+// 게시글 관련 타입들
+export interface Post {
+  id: number;
+  board_id: number;
+  category_id?: number;
+  user_id: string;
+  ttl: string;
+  cn: string;
+  smmry?: string;
+  stts: 'PUBLISHED' | 'DRAFT' | 'DELETED';
+  ntce_yn: boolean;
+  scr_yn: boolean;
+  vw_cnt: number;
+  lk_cnt: number;
+  cmt_cnt: number;
+  att_cnt: number;
+  lst_cmt_dt?: string;
+  pbl_dt: string;
+  crt_dt: string;
+  upd_dt?: string;
+  author_nickname: string;
+  category_nm?: string;
+}
+
+export interface PostCreate {
+  board_id: number;
+  category_id?: number;
+  ttl: string;
+  cn: string;
+  smmry?: string;
+  ntce_yn?: boolean;
+  scr_yn?: boolean;
+  pwd?: string;
+  tags?: string[];
+}
+
+export interface PostUpdate {
+  ttl?: string;
+  cn?: string;
+  smmry?: string;
+  category_id?: number;
+  ntce_yn?: boolean;
+  scr_yn?: boolean;
+  stts?: 'PUBLISHED' | 'DRAFT' | 'DELETED';
+  tags?: string[];
+  change_rsn?: string;
+}
+
 // 게시판 API 함수들
 export const boardApi = {
   // 게시판 목록 조회
@@ -123,4 +171,35 @@ export const categoryApi = {
   // 카테고리 삭제
   deleteCategory: (categoryId: number) =>
     del<void>(`/api/v1/boards/categories/${categoryId}`),
+};
+
+// 게시글 API 함수들
+export const postApi = {
+  // 게시글 목록 조회
+  getPosts: (boardId: number, params?: { skip?: number; limit?: number; status?: string }) =>
+    get<Post[]>(`/api/v1/boards/boards/${boardId}/posts`, { params }),
+
+  // 게시글 상세 조회
+  getPost: (postId: number) =>
+    get<Post>(`/api/v1/boards/posts/${postId}`),
+
+  // 게시글 생성
+  createPost: (data: PostCreate) =>
+    post<Post>('/api/v1/boards/posts', data),
+
+  // 게시글 수정
+  updatePost: (postId: number, data: PostUpdate) =>
+    put<Post>(`/api/v1/boards/posts/${postId}`, data),
+
+  // 게시글 삭제
+  deletePost: (postId: number) =>
+    del<void>(`/api/v1/boards/posts/${postId}`),
+
+  // 게시글 좋아요 토글
+  toggleLike: (postId: number) =>
+    post<{ liked: boolean; like_count: number }>(`/api/v1/boards/posts/${postId}/like`),
+
+  // 게시글 조회수 증가
+  incrementViewCount: (postId: number) =>
+    put<void>(`/api/v1/boards/posts/${postId}/view`),
 };

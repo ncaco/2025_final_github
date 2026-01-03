@@ -255,7 +255,7 @@ class BbsComment(Base):
     )
 
 
-class BbsAttachment(BaseModel):
+class BbsAttachment(Base):
     """첨부파일 테이블"""
     __tablename__ = "bbs_attachments"
 
@@ -270,6 +270,8 @@ class BbsAttachment(BaseModel):
     mime_typ = Column(String(100), nullable=False, comment="MIME 타입")
     file_typ = Column(Enum(AttachmentFileType), nullable=False, comment="파일 유형")
     dwld_cnt = Column(Integer, default=0, comment="다운로드 수")
+    del_yn = Column(Boolean, default=False, nullable=False, comment="삭제여부")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     post = relationship("BbsPost", back_populates="attachments")
@@ -284,7 +286,7 @@ class BbsAttachment(BaseModel):
     )
 
 
-class BbsFileThumbnail(BaseModel):
+class BbsFileThumbnail(Base):
     """파일 썸네일 테이블"""
     __tablename__ = "bbs_file_thumbnails"
 
@@ -295,6 +297,7 @@ class BbsFileThumbnail(BaseModel):
     thumbnail_sz = Column(BigInteger, nullable=False, comment="썸네일 크기 (바이트)")
     width = Column(Integer, comment="썸네일 너비")
     height = Column(Integer, comment="썸네일 높이")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     attachment = relationship("BbsAttachment", back_populates="thumbnails")
@@ -305,7 +308,7 @@ class BbsFileThumbnail(BaseModel):
     )
 
 
-class BbsPostLike(BaseModel):
+class BbsPostLike(Base):
     """게시글 좋아요 테이블"""
     __tablename__ = "bbs_post_likes"
 
@@ -313,6 +316,7 @@ class BbsPostLike(BaseModel):
     post_id = Column(BigInteger, ForeignKey("bbs_posts.id", ondelete="CASCADE"), nullable=False, comment="게시글 ID")
     user_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="사용자 ID")
     typ = Column(Enum(LikeType), default=LikeType.LIKE, comment="좋아요 유형")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     post = relationship("BbsPost", back_populates="post_likes")
@@ -325,7 +329,7 @@ class BbsPostLike(BaseModel):
     )
 
 
-class BbsCommentLike(BaseModel):
+class BbsCommentLike(Base):
     """댓글 좋아요 테이블"""
     __tablename__ = "bbs_comment_likes"
 
@@ -333,6 +337,7 @@ class BbsCommentLike(BaseModel):
     comment_id = Column(BigInteger, ForeignKey("bbs_comments.id", ondelete="CASCADE"), nullable=False, comment="댓글 ID")
     user_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="사용자 ID")
     typ = Column(Enum(LikeType), default=LikeType.LIKE, comment="좋아요 유형")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     comment = relationship("BbsComment", back_populates="comment_likes")
@@ -345,13 +350,14 @@ class BbsCommentLike(BaseModel):
     )
 
 
-class BbsBookmark(BaseModel):
+class BbsBookmark(Base):
     """북마크 테이블"""
     __tablename__ = "bbs_bookmarks"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment="북마크 일련번호")
     post_id = Column(BigInteger, ForeignKey("bbs_posts.id", ondelete="CASCADE"), nullable=False, comment="게시글 ID")
     user_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="사용자 ID")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     post = relationship("BbsPost", back_populates="bookmarks")
@@ -412,7 +418,7 @@ class BbsNotification(BaseModel):
     )
 
 
-class BbsTag(BaseModel):
+class BbsTag(Base):
     """태그 테이블"""
     __tablename__ = "bbs_tags"
 
@@ -421,18 +427,20 @@ class BbsTag(BaseModel):
     dsc = Column(String(200), comment="태그 설명")
     color = Column(String(7), comment="태그 색상 (#RRGGBB 형식)")
     usage_cnt = Column(Integer, default=0, comment="사용 횟수")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     post_tags = relationship("BbsPostTag", back_populates="tag", cascade="all, delete-orphan")
 
 
-class BbsPostTag(BaseModel):
+class BbsPostTag(Base):
     """게시글-태그 매핑 테이블"""
     __tablename__ = "bbs_post_tags"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment="매핑 일련번호")
     post_id = Column(BigInteger, ForeignKey("bbs_posts.id", ondelete="CASCADE"), nullable=False, comment="게시글 ID")
     tag_id = Column(BigInteger, ForeignKey("bbs_tags.id", ondelete="CASCADE"), nullable=False, comment="태그 ID")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 
     # 관계
     post = relationship("BbsPost", back_populates="post_tags")

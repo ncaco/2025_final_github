@@ -208,10 +208,12 @@ class PostResponse(PostBase):
     pbl_dt: datetime
     crt_dt: datetime
     upd_dt: Optional[datetime]
-    use_yn: bool
-    author_nickname: Optional[str]
-    category_nm: Optional[str]
-    tags: Optional[List[str]]
+    author_nickname: Optional[str] = None
+    category_nm: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+    class Config:
+        from_attributes = True
 
 
 class PostDetailResponse(PostResponse):
@@ -219,6 +221,9 @@ class PostDetailResponse(PostResponse):
     attachments: Optional[List[Dict[str, Any]]] = None
     is_liked: Optional[bool] = None
     is_bookmarked: Optional[bool] = None
+
+    class Config:
+        from_attributes = True
 
 
 class PostListRequest(BaseModel):
@@ -298,6 +303,9 @@ class AttachmentResponse(BaseModel):
     crt_dt: datetime
     use_yn: bool
     thumbnails: Optional[List[Dict[str, Any]]] = None
+
+    class Config:
+        from_attributes = True
 
 
 # 좋아요 스키마
