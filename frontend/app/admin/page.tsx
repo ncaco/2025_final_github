@@ -138,13 +138,13 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
+        <div className="space-y-8 p-6">
+          <div>
         <h1 className="text-3xl font-bold tracking-tight">관리자 대시보드</h1>
         <p className="text-muted-foreground">
           시스템 현황과 최근 활동을 모니터링하고 관리할 수 있습니다.
-        </p>
-      </div>
+            </p>
+          </div>
 
       {/* 시스템 현황 */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -152,7 +152,7 @@ export default function AdminPage() {
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">총 게시글</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          </CardHeader>
+              </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">
               {loading ? '...' : stats?.total_posts.toLocaleString() || 0}
@@ -160,14 +160,14 @@ export default function AdminPage() {
             <p className="text-xs text-muted-foreground">
               오늘 {stats?.posts_today || 0}개 작성됨
             </p>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
         <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">총 사용자</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          </CardHeader>
+              </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">
               {loading ? '...' : stats?.total_users.toLocaleString() || 0}
@@ -175,14 +175,14 @@ export default function AdminPage() {
             <p className="text-xs text-muted-foreground">
               오늘 {stats?.users_today || 0}명 가입
             </p>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
         <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">총 댓글</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-          </CardHeader>
+              </CardHeader>
           <CardContent className="pt-0">
             <div className="text-2xl font-bold">
               {loading ? '...' : stats?.total_comments.toLocaleString() || 0}
@@ -190,8 +190,8 @@ export default function AdminPage() {
             <p className="text-xs text-muted-foreground">
               오늘 {stats?.comments_today || 0}개 작성됨
             </p>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
         <Card className="min-w-0">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -211,14 +211,14 @@ export default function AdminPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* 최근 활동 */}
-        <Card>
-          <CardHeader>
+            <Card>
+              <CardHeader>
             <CardTitle>최근 활동</CardTitle>
             <CardDescription>
               시스템의 최근 활동 내역입니다.
             </CardDescription>
-          </CardHeader>
-          <CardContent>
+              </CardHeader>
+              <CardContent>
             <div className="space-y-4">
               {recentActivities.map((activity) => {
                 const Icon = getActivityIcon(activity.type);
@@ -249,17 +249,17 @@ export default function AdminPage() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
         {/* 빠른 액션 */}
-        <Card>
-          <CardHeader>
+            <Card>
+              <CardHeader>
             <CardTitle>빠른 액션</CardTitle>
             <CardDescription>
               자주 사용하는 관리 기능을 바로 실행할 수 있습니다.
             </CardDescription>
-          </CardHeader>
+              </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               <Button variant="outline" className="justify-start" asChild>
@@ -295,21 +295,21 @@ export default function AdminPage() {
                   <BarChart3 className="mr-2 h-4 w-4" />
                   통계 보기
                 </Link>
-              </Button>
+                </Button>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
       </div>
 
       {/* 주요 관리 메뉴 */}
-      <Card>
-        <CardHeader>
+            <Card>
+              <CardHeader>
           <CardTitle>관리 메뉴</CardTitle>
           <CardDescription>
             각 기능별 상세 관리를 위한 메뉴입니다.
           </CardDescription>
-        </CardHeader>
-        <CardContent>
+              </CardHeader>
+              <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-2">
               <h4 className="font-semibold text-sm">게시판 관리</h4>
@@ -356,9 +356,9 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+              </CardContent>
+            </Card>
+      </div>
   );
 }
 

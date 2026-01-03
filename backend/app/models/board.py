@@ -117,7 +117,7 @@ class AdminActionType(enum.Enum):
     BOARD_DELETE = "BOARD_DELETE"
 
 
-class BbsBoard(Base):
+class BbsBoard(BaseModel):
     """게시판 테이블"""
     __tablename__ = "bbs_boards"
 
@@ -134,8 +134,6 @@ class BbsBoard(Base):
     max_file_size = Column(Integer, default=10, comment="최대 파일 크기(MB)")
     sort_order = Column(Integer, default=0, comment="정렬 순서")
     post_count = Column(Integer, default=0, comment="게시글 수")
-    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
-    upd_dt = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=True, comment="수정일시")
 
     # 관계
     categories = relationship("BbsCategory", back_populates="board", cascade="all, delete-orphan")

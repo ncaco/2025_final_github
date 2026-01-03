@@ -1,0 +1,34 @@
+# Cursor Rules for 2026 Challenge Project
+
+## Development Environment
+- Backend: FastAPI server running on `http://localhost:8000` with auto-reload enabled
+- Frontend: Next.js development server running on `http://localhost:3000` with hot reload enabled
+- Database: PostgreSQL running locally
+
+## Server Management
+- **DO NOT restart backend/frontend servers manually** - Both servers are already running in the background with auto-reload/hot-reload enabled
+- Code changes are automatically reflected without server restart
+- Backend uses `--reload` flag, Frontend uses development mode with hot module replacement
+
+## Project Structure
+- Backend: `/backend` directory (FastAPI)
+- Frontend: `/frontend` directory (Next.js + TypeScript)
+- Database: PostgreSQL with SQLAlchemy ORM
+- Admin interface: `/frontend/app/admin` routes
+
+## Development Workflow
+- Make code changes directly - servers will auto-reload
+- Test API endpoints via browser or API client
+- Frontend components auto-refresh on changes
+- Database migrations handled automatically via SQLAlchemy
+
+## Common Operations
+- Backend API testing: Use TestClient or direct HTTP requests
+- Frontend testing: Use browser development tools
+- Database operations: Use SQLAlchemy ORM methods
+- Admin interface: Access via `/admin` routes
+
+## Performance Notes
+- Development servers are optimized for fast reloads
+- No need to stop/start servers between changes
+- Hot reload provides instant feedback for UI changes

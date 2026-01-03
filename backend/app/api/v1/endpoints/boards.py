@@ -42,8 +42,7 @@ async def create_board(
     """게시판 생성"""
     # 게시판명 중복 체크
     existing_board = db.query(BbsBoard).filter(
-        BbsBoard.nm == board.nm,
-        BbsBoard.del_yn == False
+        BbsBoard.nm == board.nm
     ).first()
 
     if existing_board:
@@ -72,7 +71,7 @@ async def get_boards(
 ):
     """게시판 목록 조회"""
     boards = db.query(BbsBoard).filter(
-        BbsBoard.actv_yn == True
+        BbsBoard.del_yn == False
     ).order_by(BbsBoard.sort_order, BbsBoard.crt_dt.desc()).offset(skip).limit(limit).all()
 
     return boards
@@ -91,8 +90,7 @@ async def get_board(
     """게시판 상세 조회"""
     board = db.query(BbsBoard).filter(
         BbsBoard.id == board_id,
-        BbsBoard.actv_yn == True,
-        BbsBoard.del_yn == False
+        BbsBoard.actv_yn == True
     ).first()
 
     if not board:
@@ -133,8 +131,7 @@ async def update_board(
     if board_update.nm:
         existing_board = db.query(BbsBoard).filter(
             BbsBoard.nm == board_update.nm,
-            BbsBoard.id != board_id,
-            BbsBoard.del_yn == False
+            BbsBoard.id != board_id
         ).first()
 
         if existing_board:
@@ -164,8 +161,7 @@ async def delete_board(
 ):
     """게시판 삭제"""
     board = db.query(BbsBoard).filter(
-        BbsBoard.id == board_id,
-        BbsBoard.del_yn == False
+        BbsBoard.id == board_id
     ).first()
 
     if not board:
@@ -196,8 +192,7 @@ async def create_category(
     """카테고리 생성"""
     # 게시판 존재 확인
     board = db.query(BbsBoard).filter(
-        BbsBoard.id == category.board_id,
-        BbsBoard.del_yn == False
+        BbsBoard.id == category.board_id
     ).first()
 
     if not board:
@@ -263,8 +258,7 @@ async def create_post(
     # 게시판 존재 및 권한 확인
     board = db.query(BbsBoard).filter(
         BbsBoard.id == post.board_id,
-        BbsBoard.actv_yn == True,
-        BbsBoard.del_yn == False
+        BbsBoard.actv_yn == True
     ).first()
 
     if not board:
