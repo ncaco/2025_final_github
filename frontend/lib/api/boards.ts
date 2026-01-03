@@ -86,7 +86,7 @@ export interface CategoryUpdate {
 // 게시판 API 함수들
 export const boardApi = {
   // 게시판 목록 조회
-  getBoards: (params?: { skip?: number; limit?: number }) =>
+  getBoards: (params?: { skip?: number; limit?: number; include_inactive?: boolean }) =>
     get<Board[]>('/api/v1/boards/boards', { params }),
 
   // 게시판 상세 조회

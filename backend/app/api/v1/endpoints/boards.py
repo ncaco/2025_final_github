@@ -67,12 +67,17 @@ async def create_board(
 async def get_boards(
     skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
     limit: int = Query(100, ge=1, le=1000, description="반환할 최대 레코드 수"),
+    include_inactive: bool = Query(False, description="비활성 게시판도 포함할지 여부"),
     db: Session = Depends(get_db)
 ):
     """게시판 목록 조회"""
-    boards = db.query(BbsBoard).filter(
-        BbsBoard.del_yn == False
-    ).order_by(BbsBoard.sort_order, BbsBoard.crt_dt.desc()).offset(skip).limit(limit).all()
+    query = db.query(BbsBoard).filter(BbsBoard.del_yn == False)
+
+    # include_inactive가 False이면 활성 게시판만 필터링
+    if not include_inactive:
+        query = query.filter(BbsBoard.actv_yn == True)
+
+    boards = query.order_by(BbsBoard.sort_order, BbsBoard.crt_dt.desc()).offset(skip).limit(limit).all()
 
     return boards
 

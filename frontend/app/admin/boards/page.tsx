@@ -37,8 +37,8 @@ export default function BoardsPage() {
   const loadBoards = useCallback(async () => {
     try {
       setLoading(true);
-      // 전체 게시판 목록 가져오기 (필터링을 위해)
-      const data = await boardApi.getBoards();
+      // 전체 게시판 목록 가져오기 (필터링을 위해) - 활성/비활성 모두 포함
+      const data = await boardApi.getBoards({ include_inactive: true });
       setBoards(data);
     } catch (error) {
       console.error('게시판 목록 로드 실패:', error);

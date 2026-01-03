@@ -328,7 +328,7 @@ export function Header() {
                       </div>
                     </Link>
                     <Link
-                      href="/boards?sort=popular"
+                      href="/boards?tab=popular"
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                       onClick={handleBoardMenuItemClick}
                     >
@@ -337,11 +337,11 @@ export function Header() {
                       </div>
                       <div>
                         <div className="font-medium text-sm">인기 게시판</div>
-                        <div className="text-xs text-muted-foreground">활발한 게시판</div>
+                        <div className="text-xs text-muted-foreground">가장 활발한 게시판</div>
                       </div>
                     </Link>
                     <Link
-                      href="/boards?filter=followed"
+                      href="/boards?tab=followed"
                       className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                       onClick={handleBoardMenuItemClick}
                     >
@@ -350,7 +350,7 @@ export function Header() {
                       </div>
                       <div>
                         <div className="font-medium text-sm">팔로우 게시판</div>
-                        <div className="text-xs text-muted-foreground">내가 팔로우한 게시판</div>
+                        <div className="text-xs text-muted-foreground">관심 있는 게시판 모음</div>
                       </div>
                     </Link>
                   </div>
