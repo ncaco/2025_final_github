@@ -15,7 +15,7 @@ import { Board, BoardType, PermissionLevel } from '@/types/board';
 import { Post } from '@/types/post';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
-import { Search, Plus, MessageSquare, Eye, ThumbsUp, User, Calendar, ArrowLeft } from 'lucide-react';
+import { Search, Plus, MessageSquare, Eye, Heart, User, Calendar, ArrowLeft, Megaphone, Lock, FileText, HelpCircle, ImageIcon, Video } from 'lucide-react';
 
 export default function BoardDetailPage() {
   const params = useParams();
@@ -241,8 +241,9 @@ export default function BoardDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="container mx-auto py-4 sm:py-6 px-4">
-        {/* 콤팩트 헤더 */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-white/20 shadow-lg">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+          {/* 콤팩트 헤더 */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20 shadow-lg">
           <div className="flex items-center gap-4">
             {/* 뒤로가기 버튼 - 박스 안쪽으로 이동 */}
             <Button
@@ -259,21 +260,25 @@ export default function BoardDetailPage() {
             {/* 왼쪽: 게시판 정보 */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {(() => {
-                const getBoardEmoji = (type: BoardType) => {
-                  const emojis = {
-                    GENERAL: '💬',
-                    NOTICE: '📢',
-                    QNA: '❓',
-                    IMAGE: '🖼️',
-                    VIDEO: '🎥',
+                const getBoardIcon = (type: BoardType) => {
+                  const icons = {
+                    GENERAL: MessageSquare,
+                    NOTICE: Megaphone,
+                    QNA: HelpCircle,
+                    IMAGE: ImageIcon,
+                    VIDEO: Video,
                   };
-                  return emojis[type] || '📄';
+                  return icons[type] || FileText;
                 };
+
+                const IconComponent = getBoardIcon(board.typ);
 
                 return (
                   <>
-                    <div className="text-2xl shrink-0">
-                      {getBoardEmoji(board.typ)}
+                    <div className="shrink-0">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white">
+                        <IconComponent className="w-5 h-5" />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -320,10 +325,10 @@ export default function BoardDetailPage() {
               </Link>
             </Button>
           </div>
-        </div>
+          </div>
 
-        {/* 검색 및 필터 바 */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-3 mb-4 sm:mb-6 border border-white/20 shadow-sm">
+          {/* 검색 및 필터 바 */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-lg p-3 border border-white/20 shadow-sm">
           <div className="flex gap-3 items-center">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
@@ -345,9 +350,9 @@ export default function BoardDetailPage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
+          </div>
 
-        {/* 게시글 목록 */}
+          {/* 게시글 목록 */}
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loading size="lg" />
@@ -357,9 +362,10 @@ export default function BoardDetailPage() {
             {filteredPosts.length > 0 ? (
               <div className="space-y-3">
                 {filteredPosts.map((post) => (
-                  <div
+                  <Link
                     key={post.id}
-                    className="group bg-white/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
+                    href={`/boards/${boardId}/posts/${post.id}`}
+                    className="block group bg-white/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
                   >
                     <div className="flex items-start gap-4">
                       {/* 게시글 정보 */}
@@ -367,21 +373,20 @@ export default function BoardDetailPage() {
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
-                              <Link
-                                href={`/boards/${boardId}/posts/${post.id}`}
-                                className="text-xl font-bold text-slate-800 hover:text-blue-700 transition-colors line-clamp-1 group-hover:underline"
-                              >
+                              <h3 className="text-xl font-bold text-slate-800 hover:text-blue-700 transition-colors line-clamp-1 group-hover:underline">
                                 {post.ttl}
-                              </Link>
+                              </h3>
                               <div className="flex items-center gap-1">
                                 {post.ntce_yn && (
-                                  <Badge variant="destructive" className="text-xs px-2 py-0.5">
-                                    📢 공지
+                                  <Badge variant="destructive" className="text-xs px-2 py-0.5 flex items-center gap-1">
+                                    <Megaphone className="h-3 w-3" />
+                                    공지
                                   </Badge>
                                 )}
                                 {post.scr_yn && (
-                                  <Badge variant="secondary" className="text-xs px-2 py-0.5">
-                                    🔒 비밀
+                                  <Badge variant="secondary" className="text-xs px-2 py-0.5 flex items-center gap-1">
+                                    <Lock className="h-3 w-3" />
+                                    비밀
                                   </Badge>
                                 )}
                               </div>
@@ -409,7 +414,7 @@ export default function BoardDetailPage() {
                             <span>{post.vw_cnt || 0}</span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <ThumbsUp className="h-4 w-4" />
+                            <Heart className="h-4 w-4" />
                             <span>{post.lk_cnt || 0}</span>
                           </div>
                           <div className="flex items-center gap-1">
@@ -419,13 +424,15 @@ export default function BoardDetailPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             ) : (
               <div className="text-center py-20">
                 <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-12 border border-white/20 shadow-lg max-w-md mx-auto">
-                  <div className="text-6xl mb-6">📝</div>
+                  <div className="flex justify-center mb-6">
+                    <FileText className="h-16 w-16 text-slate-400" />
+                  </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-3">게시글이 없습니다</h3>
                   <p className="text-slate-600 mb-6 leading-relaxed">
                     {searchKeyword
@@ -445,6 +452,7 @@ export default function BoardDetailPage() {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

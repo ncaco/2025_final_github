@@ -194,26 +194,25 @@ export default function PostDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       <div className="container mx-auto py-6 px-4">
-        {/* 헤더 네비게이션 */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="hover:bg-slate-100/50"
-          >
-            <Link href={`/boards/${boardId}`} className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>{board.nm}</span>
-            </Link>
-          </Button>
-          <div className="text-sm text-slate-600">
-            게시판 › {board.nm} › 게시글
-          </div>
-        </div>
-
-        {/* 게시글 본문 */}
         <div className="max-w-4xl mx-auto space-y-6">
+          {/* 헤더 네비게이션 - 폼 왼쪽 라인에 맞춤 */}
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="shrink-0 h-8 w-8 hover:bg-slate-100/50"
+            >
+              <Link href={`/boards/${boardId}`}>
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <div className="text-sm text-slate-600">
+              게시판 › {board.nm} › 게시글
+            </div>
+          </div>
+
+          {/* 게시글 본문 */}
           {/* 게시글 헤더 */}
           <Card className="bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg">
             <CardHeader>
@@ -235,12 +234,6 @@ export default function PostDetailPage() {
                       <Calendar className="h-4 w-4" />
                       <span>{formatDate(post.crt_dt)}</span>
                     </div>
-
-                    {post.upd_dt && post.upd_dt !== post.crt_dt && (
-                      <div className="text-xs text-slate-500">
-                        (수정됨: {formatDate(post.upd_dt)})
-                      </div>
-                    )}
                   </div>
 
                   {/* 카테고리 및 상태 */}
@@ -262,14 +255,6 @@ export default function PostDetailPage() {
                         비밀글
                       </Badge>
                     )}
-
-                    <Badge
-                      variant={post.stts === 'PUBLISHED' ? 'default' : 'outline'}
-                      className="text-xs"
-                    >
-                      {post.stts === 'PUBLISHED' ? '게시됨' :
-                       post.stts === 'DRAFT' ? '임시저장' : '삭제됨'}
-                    </Badge>
                   </div>
 
                   {/* 태그 */}

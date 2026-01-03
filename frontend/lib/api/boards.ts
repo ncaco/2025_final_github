@@ -129,6 +129,7 @@ export interface PostUpdate {
   category_id?: number;
   ntce_yn?: boolean;
   scr_yn?: boolean;
+  pwd?: string;
   stts?: 'PUBLISHED' | 'DRAFT' | 'DELETED';
   tags?: string[];
   change_rsn?: string;

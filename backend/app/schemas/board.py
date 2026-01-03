@@ -190,6 +190,7 @@ class PostUpdate(BaseModel):
     category_id: Optional[int] = None
     ntce_yn: Optional[bool] = None
     scr_yn: Optional[bool] = None
+    pwd: Optional[str] = Field(None, max_length=255, description="비밀번호 (비밀글 수정 시)")
     stts: Optional[PostStatus] = None
     tags: Optional[List[str]] = None
     change_rsn: Optional[str] = Field(None, description="변경 사유")
