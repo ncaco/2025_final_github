@@ -1,39 +1,30 @@
-#!/usr/bin/env python3
-"""데이터베이스 테이블 확인 스크립트"""
-
+from app.main import app
 from app.database import engine
+from app.models import board
 from sqlalchemy import text
 
-def main():
-    try:
-        with engine.connect() as conn:
-            # 테이블 목록 조회
-            result = conn.execute(text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'"))
-            tables = result.fetchall()
+print('데이터베이스 연결 테스트...')
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text('SELECT 1'))
+        print('데이터베이스 연결 성공')
+except Exception as e:
+    print(f'데이터베이스 연결 실패: {e}')
 
-            print("Database tables:")
-            for table in tables:
-                print(f"  - {table[0]}")
+print('게시판 테이블 확인...')
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text('SELECT COUNT(*) FROM bbs_boards'))
+        count = result.fetchone()[0]
+        print(f'게시판 테이블에 {count}개의 레코드가 있습니다.')
+except Exception as e:
+    print(f'게시판 테이블 확인 실패: {e}')
 
-            # common_file 테이블 존재 여부 확인
-            result = conn.execute(text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'common_file')"))
-            exists = result.fetchone()[0]
-
-            if exists:
-                print("\n✅ common_file table exists!")
-
-                # 테이블 구조 확인
-                result = conn.execute(text("SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'common_file' ORDER BY ordinal_position"))
-                columns = result.fetchall()
-
-                print("\ncommon_file table columns:")
-                for col in columns:
-                    print(f"  - {col[0]}: {col[1]} ({'NULL' if col[2] == 'YES' else 'NOT NULL'})")
-            else:
-                print("\n❌ common_file table does NOT exist!")
-
-    except Exception as e:
-        print(f"Error: {e}")
-
-if __name__ == "__main__":
-    main()
+print('게시판 테이블 구조 확인...')
+try:
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'bbs_boards' ORDER BY ordinal_position"))
+        columns = [row[0] for row in result.fetchall()]
+        print(f'게시판 테이블 칼럼들: {columns}')
+except Exception as e:
+    print(f'게시판 테이블 구조 확인 실패: {e}')

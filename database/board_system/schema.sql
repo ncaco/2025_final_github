@@ -112,8 +112,21 @@ CREATE TABLE bbs_boards (
     max_file_size INT DEFAULT 10 CHECK (max_file_size > 0),
     sort_order INT DEFAULT 0,
     post_count INT DEFAULT 0,
+    -- 삭제 관련
+    del_dt TIMESTAMP WITH TIME ZONE,
+    del_by VARCHAR(100),
+    del_by_nm VARCHAR(100),
+    del_yn BOOLEAN DEFAULT FALSE NOT NULL,
+    -- 생성 관련
     crt_dt TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    upd_dt TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    crt_by VARCHAR(100),
+    crt_by_nm VARCHAR(100),
+    -- 수정 관련
+    upd_dt TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    upd_by VARCHAR(100),
+    upd_by_nm VARCHAR(100),
+    -- 사용여부
+    use_yn BOOLEAN DEFAULT TRUE NOT NULL
 );
 
 -- 게시판 테이블 인덱스

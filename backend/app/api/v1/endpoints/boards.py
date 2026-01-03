@@ -72,8 +72,7 @@ async def get_boards(
 ):
     """게시판 목록 조회"""
     boards = db.query(BbsBoard).filter(
-        BbsBoard.actv_yn == True,
-        BbsBoard.del_yn == False
+        BbsBoard.actv_yn == True
     ).order_by(BbsBoard.sort_order, BbsBoard.crt_dt.desc()).offset(skip).limit(limit).all()
 
     return boards

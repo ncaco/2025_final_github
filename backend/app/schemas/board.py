@@ -125,7 +125,7 @@ class BoardResponse(BoardBase):
     post_count: int
     crt_dt: datetime
     upd_dt: Optional[datetime]
-    use_yn: bool
+    use_yn: Optional[bool] = True
 
 
 # 카테고리 스키마
