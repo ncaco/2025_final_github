@@ -341,8 +341,7 @@ async def get_posts(
         BbsCategory, BbsPost.category_id == BbsCategory.id
     ).filter(
         BbsPost.board_id == board_id,
-        BbsPost.stts == status,
-        BbsPost.del_yn == False
+        BbsPost.stts == status
     )
 
     # 카테고리 필터
@@ -401,7 +400,6 @@ async def get_post(
     # 게시글 조회 및 조회수 증가
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -479,7 +477,6 @@ async def update_post(
     """게시글 수정"""
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -549,7 +546,6 @@ async def delete_post(
     """게시글 삭제"""
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -587,7 +583,6 @@ async def create_comment(
     # 게시글 존재 확인
     post = db.query(BbsPost).filter(
         BbsPost.id == comment.post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -637,7 +632,6 @@ async def get_comments_by_post(
     # 게시글 존재 확인
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -697,7 +691,6 @@ async def toggle_post_like(
     # 게시글 존재 확인
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -745,7 +738,6 @@ async def toggle_bookmark(
     # 게시글 존재 확인
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
     ).first()
 
     if not post:
@@ -806,7 +798,6 @@ async def search_posts(
         BbsBoard, BbsPost.board_id == BbsBoard.id
     ).filter(
         BbsPost.stts == PostStatus.PUBLISHED,
-        BbsPost.del_yn == False,
         or_(
             BbsPost.ttl.ilike(f'%{query}%'),
             BbsPost.cn.ilike(f'%{query}%'),
@@ -871,7 +862,6 @@ async def get_popular_posts(
         BbsBoard, BbsPost.board_id == BbsBoard.id
     ).filter(
         BbsPost.stts == PostStatus.PUBLISHED,
-        BbsPost.del_yn == False
     ).order_by(
         (BbsPost.vw_cnt + BbsPost.lk_cnt * 10 + BbsPost.cmt_cnt * 5).desc()
     ).limit(limit).all()

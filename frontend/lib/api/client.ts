@@ -57,6 +57,7 @@ export const tokenStorage = {
 export interface RequestOptions extends RequestInit {
   skipAuth?: boolean;
   skipRefresh?: boolean;
+  params?: Record<string, any>;
 }
 
 /**
@@ -66,9 +67,24 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { skipAuth = false, skipRefresh = false, ...fetchOptions } = options;
+  const { skipAuth = false, skipRefresh = false, params, ...fetchOptions } = options;
 
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  // URL 생성 및 쿼리 파라미터 추가
+  let url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+
+  if (params && Object.keys(params).length > 0) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+    const paramString = searchParams.toString();
+    if (paramString) {
+      url += (url.includes('?') ? '&' : '?') + paramString;
+    }
+  }
+
   console.log('🌐 API 요청 URL:', url);
 
   // 헤더 설정

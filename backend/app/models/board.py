@@ -174,7 +174,7 @@ class BbsCategory(BaseModel):
     )
 
 
-class BbsPost(BaseModel):
+class BbsPost(Base):
     """게시글 테이블"""
     __tablename__ = "bbs_posts"
 
@@ -195,6 +195,10 @@ class BbsPost(BaseModel):
     att_cnt = Column(Integer, default=0, comment="첨부파일 수")
     lst_cmt_dt = Column(DateTime, comment="마지막 댓글 일시")
     pbl_dt = Column(DateTime, default=func.current_timestamp(), comment="게시일시")
+
+    # 직접 추가하는 BaseModel 필드들 (일부만)
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
+    upd_dt = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=True, comment="수정일시")
 
     # 관계
     board = relationship("BbsBoard", back_populates="posts")
@@ -217,7 +221,7 @@ class BbsPost(BaseModel):
     )
 
 
-class BbsComment(BaseModel):
+class BbsComment(Base):
     """댓글 테이블"""
     __tablename__ = "bbs_comments"
 
@@ -231,6 +235,10 @@ class BbsComment(BaseModel):
     lk_cnt = Column(Integer, default=0, comment="좋아요 수")
     depth = Column(Integer, default=0, comment="댓글 깊이 (0-5)")
     sort_order = Column(Integer, default=0, comment="정렬 순서")
+
+    # 직접 추가하는 BaseModel 필드들 (일부만)
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
+    upd_dt = Column(DateTime, default=func.current_timestamp(), onupdate=func.current_timestamp(), nullable=True, comment="수정일시")
 
     # 관계
     post = relationship("BbsPost", back_populates="comments")
