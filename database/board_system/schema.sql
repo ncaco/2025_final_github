@@ -674,7 +674,7 @@ CREATE INDEX idx_bbs_post_tags_tag ON bbs_post_tags(tag_id);
 CREATE TABLE bbs_follows (
     id BIGSERIAL PRIMARY KEY,
     follower_id VARCHAR(100) NOT NULL REFERENCES public.COMMON_USER(USER_ID) ON DELETE CASCADE,
-    following_id VARCHAR(100) NOT NULL REFERENCES public.COMMON_USER(USER_ID) ON DELETE CASCADE,
+    following_id VARCHAR(100) NOT NULL, -- USER 타입일 때는 COMMON_USER.USER_ID, BOARD 타입일 때는 bbs_boards.id를 문자열로 저장
     typ follow_type DEFAULT 'USER',
     crt_dt TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 

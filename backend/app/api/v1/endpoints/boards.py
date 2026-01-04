@@ -122,6 +122,41 @@ async def get_board(
     return board
 
 
+@router.get(
+    "/boards/{board_id}/statistics",
+    summary="게시판 통계 조회",
+    description="특정 게시판의 통계 정보(총 조회수 등)를 조회합니다."
+)
+async def get_board_statistics(
+    board_id: int = Path(..., description="게시판 ID"),
+    db: Session = Depends(get_db)
+):
+    """게시판 통계 조회"""
+    # 게시판 존재 확인
+    board = db.query(BbsBoard).filter(
+        BbsBoard.id == board_id,
+        BbsBoard.actv_yn == True
+    ).first()
+
+    if not board:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="게시판을 찾을 수 없습니다"
+        )
+
+    # 총 조회수 계산 (PUBLISHED 상태의 게시글만)
+    total_view_count = db.query(func.sum(BbsPost.vw_cnt)).filter(
+        BbsPost.board_id == board_id,
+        BbsPost.stts == PostStatus.PUBLISHED
+    ).scalar() or 0
+
+    return {
+        "board_id": board_id,
+        "total_view_count": int(total_view_count),
+        "post_count": board.post_count or 0
+    }
+
+
 @router.put(
     "/boards/{board_id}",
     response_model=BoardResponse,

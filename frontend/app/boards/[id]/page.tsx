@@ -11,16 +11,17 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { boardApi } from '@/lib/api/boards';
 import { postApi } from '@/lib/api/posts';
+import { get, post, del } from '@/lib/api/client';
 import { Board, BoardType, PermissionLevel } from '@/types/board';
 import { Post } from '@/types/post';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
-import { Search, Plus, MessageSquare, Eye, Heart, User, Calendar, ArrowLeft, Megaphone, Lock, FileText, HelpCircle, ImageIcon, Video } from 'lucide-react';
+import { Search, Plus, MessageSquare, Eye, Heart, User, Calendar, ArrowLeft, Megaphone, Lock, FileText, HelpCircle, ImageIcon, Video, Users } from 'lucide-react';
 
 export default function BoardDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [board, setBoard] = useState<Board | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -28,6 +29,10 @@ export default function BoardDetailPage() {
   const [boardLoading, setBoardLoading] = useState(true);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [sortBy, setSortBy] = useState<string>('latest');
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [totalViewCount, setTotalViewCount] = useState(0);
 
   const boardId = params.id as string;
 
@@ -37,6 +42,17 @@ export default function BoardDetailPage() {
       loadPosts();
     }
   }, [boardId]);
+
+  // 게시판 로딩 완료 후 팔로우 상태 및 팔로워 수 확인
+  useEffect(() => {
+    if (board) {
+      loadFollowerCount();
+      loadBoardStatistics();
+      if (isAuthenticated) {
+        checkFollowStatus();
+      }
+    }
+  }, [board, isAuthenticated, user]);
 
   // 페이지 포커스 시 목록 갱신 (삭제 후 돌아왔을 때 자동 갱신)
   useEffect(() => {
@@ -65,6 +81,81 @@ export default function BoardDetailPage() {
       router.push('/boards');
     } finally {
       setBoardLoading(false);
+    }
+  };
+
+  const checkFollowStatus = async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      const response = await get<{ is_following: boolean }>(`/api/v1/board-extra/follow/status/board/${boardId}`);
+      setIsFollowing(response.is_following);
+    } catch (error) {
+      console.error('팔로우 상태 확인 실패:', error);
+    }
+  };
+
+  const loadFollowerCount = async () => {
+    try {
+      const response = await get<{ follower_count: number }>(`/api/v1/board-extra/follow/count/board/${boardId}`);
+      setFollowerCount(response.follower_count);
+    } catch (error) {
+      console.error('팔로워 수 조회 실패:', error);
+    }
+  };
+
+  const loadBoardStatistics = async () => {
+    try {
+      const response = await get<{ board_id: number; total_view_count: number; post_count: number }>(
+        `/api/v1/boards/boards/${boardId}/statistics`
+      );
+      setTotalViewCount(response.total_view_count);
+    } catch (error) {
+      console.error('게시판 통계 조회 실패:', error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: '로그인 필요',
+        description: '팔로우 기능을 이용하려면 로그인이 필요합니다.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setFollowLoading(true);
+      if (isFollowing) {
+        await del<void>(`/api/v1/board-extra/follow/${boardId}?follow_type=BOARD`);
+        setIsFollowing(false);
+        setFollowerCount(prev => Math.max(0, prev - 1)); // 팔로워 수 감소
+        toast({
+          title: '팔로우 취소',
+          description: '게시판 팔로우를 취소했습니다.',
+        });
+      } else {
+        await post<{ id: number; follower_id: string; following_id: string; typ: string; crt_dt: string }>(
+          '/api/v1/board-extra/follow',
+          { following_id: boardId.toString(), typ: 'BOARD' }
+        );
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1); // 팔로워 수 증가
+        toast({
+          title: '팔로우 완료',
+          description: '게시판을 팔로우했습니다.',
+        });
+      }
+    } catch (error) {
+      console.error('팔로우 토글 실패:', error);
+      toast({
+        title: '오류',
+        description: '팔로우 처리 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -300,11 +391,11 @@ export default function BoardDetailPage() {
                         </div>
                         <div className="hidden sm:flex items-center gap-1">
                           <Eye className="h-4 w-4" />
-                          <span>총 조회수: 0</span>
+                          <span>총 조회수: {totalViewCount.toLocaleString()}</span>
                         </div>
                         <div className="hidden md:flex items-center gap-1">
-                          <User className="h-4 w-4" />
-                          <span>팔로워: 0</span>
+                          <Users className="h-4 w-4" />
+                          <span>팔로워: {followerCount.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -312,6 +403,24 @@ export default function BoardDetailPage() {
                 );
               })()}
             </div>
+
+            {/* 팔로우 버튼 */}
+            <Button
+              onClick={handleFollowToggle}
+              disabled={followLoading}
+              size="sm"
+              variant={isFollowing ? "default" : "outline"}
+              className={`shrink-0 mr-2 px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 ${
+                isFollowing
+                  ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-red-500'
+                  : 'bg-white/50 border-slate-200 hover:bg-red-50 hover:border-red-300 text-slate-700 hover:text-red-600'
+              }`}
+            >
+              <Heart className={`h-4 w-4 mr-1 ${isFollowing ? 'fill-current' : ''}`} />
+              <span className="hidden sm:inline">
+                {followLoading ? '처리중...' : (isFollowing ? '팔로잉' : '팔로우')}
+              </span>
+            </Button>
 
             {/* 글쓰기 버튼 - 좌측으로 이동 */}
             <Button

@@ -462,7 +462,7 @@ class BbsFollow(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True, comment="팔로우 일련번호")
     follower_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="팔로워 ID")
-    following_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="CASCADE"), nullable=False, comment="팔로잉 ID")
+    following_id = Column(String(100), nullable=False, comment="팔로잉 ID")  # 외래키 제약조건 제거 (USER/BOARD 타입 모두 지원)
     typ = Column(Enum(FollowType), default=FollowType.USER, comment="팔로우 유형")
     crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="생성일시")
 

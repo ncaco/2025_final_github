@@ -168,7 +168,7 @@ async def follow(
             detail="이미 팔로우 중입니다"
         )
 
-    # 팔로우 생성
+    # 팔로우 생성 (외래키 제약조건 제거로 인해 단순한 ORM 사용 가능)
     follow_obj = BbsFollow(
         follower_id=current_user.user_id,
         following_id=follow_request.following_id,
@@ -254,6 +254,44 @@ async def get_following(
 
     following = query.order_by(BbsFollow.crt_dt.desc()).offset(skip).limit(limit).all()
     return following
+
+
+@router.get(
+    "/follow/status/board/{board_id}",
+    summary="게시판 팔로우 상태 조회",
+    description="현재 사용자가 특정 게시판을 팔로우하고 있는지 확인합니다."
+)
+async def check_board_follow_status(
+    board_id: int = Path(..., description="게시판 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """게시판 팔로우 상태 조회"""
+    follow = db.query(BbsFollow).filter(
+        BbsFollow.follower_id == current_user.user_id,
+        BbsFollow.following_id == str(board_id),
+        BbsFollow.typ == FollowType.BOARD
+    ).first()
+
+    return {"is_following": follow is not None}
+
+
+@router.get(
+    "/follow/count/board/{board_id}",
+    summary="게시판 팔로워 수 조회",
+    description="특정 게시판의 팔로워 수를 조회합니다."
+)
+async def get_board_follower_count(
+    board_id: int = Path(..., description="게시판 ID"),
+    db: Session = Depends(get_db)
+):
+    """게시판 팔로워 수 조회"""
+    follower_count = db.query(BbsFollow).filter(
+        BbsFollow.following_id == str(board_id),
+        BbsFollow.typ == FollowType.BOARD
+    ).count()
+
+    return {"follower_count": follower_count}
 
 
 # 알림 기능 엔드포인트

@@ -135,6 +135,11 @@ export interface PostUpdate {
   change_rsn?: string;
 }
 
+// 팔로우 상태 확인 함수
+export function getBoardFollowStatusFunc(boardId: number) {
+  return get<{ is_following: boolean }>(`/api/v1/board-extra/follow/status/board/${boardId}`);
+}
+
 // 게시판 API 함수들
 export const boardApi = {
   // 게시판 목록 조회
@@ -206,4 +211,16 @@ export const postApi = {
   // 게시글 조회수 증가
   incrementViewCount: (postId: number) =>
     put<void>(`/api/v1/boards/posts/${postId}/view`),
+
+  // 팔로우 관련 API
+  getBoardFollowStatus: getBoardFollowStatusFunc,
+
+  followBoard: (boardId: number) =>
+    post<{ id: number; follower_id: string; following_id: string; typ: string; crt_dt: string }>(
+      '/api/v1/board-extra/follow',
+      { following_id: boardId.toString(), typ: 'BOARD' }
+    ),
+
+  unfollowBoard: (boardId: number) =>
+    del<void>(`/api/v1/board-extra/follow/${boardId}?follow_type=BOARD`),
 };
