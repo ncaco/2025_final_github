@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { boardApi, postApi, Board, Post } from '@/lib/api/boards';
+import { boardApi, postApi, commentApi, Board, Post, Comment } from '@/lib/api/boards';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
 import {
@@ -21,8 +21,13 @@ import {
   Tag,
   Edit,
   Trash2,
-  Paperclip
+  Paperclip,
+  Reply,
+  Send,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 // 날짜 포맷팅 유틸리티 함수
 const formatDate = (date: Date | string) => {
   const d = new Date(date);
@@ -44,8 +49,14 @@ export default function PostDetailPage() {
   // 상태 관리
   const [board, setBoard] = useState<Board | null>(null);
   const [post, setPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [liking, setLiking] = useState(false);
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [expandedComments, setExpandedComments] = useState<Set<number>>(new Set());
 
   // 데이터 로드
   useEffect(() => {
@@ -75,6 +86,9 @@ export default function PostDetailPage() {
       // 게시글 상세 정보 로드
       const postResponse = await postApi.getPost(Number(postId));
       setPost(postResponse);
+
+      // 댓글 목록 로드
+      await loadComments();
 
     } catch (error) {
       console.error('데이터 로드 실패:', error);
@@ -139,11 +153,12 @@ export default function PostDetailPage() {
       router.push(`/boards/${boardId}`);
       router.refresh(); // 목록 페이지 강제 갱신
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('게시글 삭제 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '게시글 삭제에 실패했습니다.';
       toast({
         title: '오류',
-        description: error?.message || '게시글 삭제에 실패했습니다.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -152,6 +167,187 @@ export default function PostDetailPage() {
   // 게시글 수정 페이지로 이동
   const handleEditPost = () => {
     router.push(`/boards/${boardId}/posts/${postId}/edit`);
+  };
+
+  // 댓글 목록 로드
+  const loadComments = async () => {
+    try {
+      const commentsData = await commentApi.getComments(Number(postId));
+      // 계층 구조로 변환
+      const commentMap = new Map<number, Comment>();
+      const rootComments: Comment[] = [];
+
+      commentsData.forEach(comment => {
+        commentMap.set(comment.id, { ...comment, children: [] });
+      });
+
+      commentsData.forEach(comment => {
+        const commentWithChildren = commentMap.get(comment.id)!;
+        if (comment.parent_id) {
+          const parent = commentMap.get(comment.parent_id);
+          if (parent) {
+            if (!parent.children) parent.children = [];
+            parent.children.push(commentWithChildren);
+          }
+        } else {
+          rootComments.push(commentWithChildren);
+        }
+      });
+
+      setComments(rootComments);
+    } catch (error) {
+      console.error('댓글 로드 실패:', error);
+    }
+  };
+
+  // 댓글 작성
+  const handleSubmitComment = async () => {
+    if (!newComment.trim()) return;
+
+    try {
+      setCommentLoading(true);
+      await commentApi.createComment({
+        post_id: Number(postId),
+        cn: newComment.trim(),
+        parent_id: replyingTo || undefined,
+      });
+
+      setNewComment('');
+      setReplyingTo(null);
+      await loadComments();
+      
+      // 게시글 댓글 수 업데이트
+      if (post) {
+        setPost({ ...post, cmt_cnt: post.cmt_cnt + 1 });
+      }
+
+      toast({
+        title: '댓글 작성 완료',
+        description: '댓글이 작성되었습니다.',
+      });
+    } catch (error) {
+      console.error('댓글 작성 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '댓글 작성에 실패했습니다.';
+      toast({
+        title: '오류',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  // 대댓글 작성
+  const handleSubmitReply = async (parentId: number) => {
+    if (!replyContent.trim()) return;
+
+    try {
+      setCommentLoading(true);
+      await commentApi.createComment({
+        post_id: Number(postId),
+        cn: replyContent.trim(),
+        parent_id: parentId,
+      });
+
+      setReplyContent('');
+      setReplyingTo(null);
+      await loadComments();
+      
+      // 게시글 댓글 수 업데이트
+      if (post) {
+        setPost({ ...post, cmt_cnt: post.cmt_cnt + 1 });
+      }
+
+      toast({
+        title: '답글 작성 완료',
+        description: '답글이 작성되었습니다.',
+      });
+    } catch (error) {
+      console.error('답글 작성 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '답글 작성에 실패했습니다.';
+      toast({
+        title: '오류',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
+  // 댓글 삭제
+  const handleDeleteComment = async (commentId: number) => {
+    const confirmed = confirm('정말로 이 댓글을 삭제하시겠습니까?');
+    if (!confirmed) return;
+
+    try {
+      await commentApi.deleteComment(commentId);
+      await loadComments();
+      
+      // 게시글 댓글 수 업데이트
+      if (post) {
+        setPost({ ...post, cmt_cnt: Math.max(0, post.cmt_cnt - 1) });
+      }
+
+      toast({
+        title: '삭제 완료',
+        description: '댓글이 삭제되었습니다.',
+      });
+    } catch (error) {
+      console.error('댓글 삭제 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '댓글 삭제에 실패했습니다.';
+      toast({
+        title: '오류',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 댓글 좋아요
+  const handleCommentLike = async (commentId: number) => {
+    try {
+      const response = await commentApi.toggleLike(commentId);
+      await loadComments();
+      
+      toast({
+        title: response.liked ? '좋아요' : '좋아요 취소',
+        description: response.liked ? '댓글에 좋아요를 눌렀습니다.' : '좋아요를 취소했습니다.',
+      });
+    } catch (error) {
+      console.error('댓글 좋아요 실패:', error);
+      toast({
+        title: '오류',
+        description: '좋아요 처리에 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // 하위 답글 개수 계산 (재귀적으로 모든 하위 답글 개수 계산)
+  const getChildCommentCount = (comment: Comment): number => {
+    if (!comment.children || comment.children.length === 0) {
+      return 0;
+    }
+    let count = comment.children.length;
+    comment.children.forEach(child => {
+      count += getChildCommentCount(child);
+    });
+    return count;
+  };
+
+  // 하위 답글 접기/펼치기 토글
+  const toggleCommentExpansion = (commentId: number) => {
+    setExpandedComments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(commentId)) {
+        newSet.delete(commentId);
+      } else {
+        newSet.add(commentId);
+      }
+      return newSet;
+    });
   };
 
   if (!isAuthenticated) {
@@ -190,6 +386,137 @@ export default function PostDetailPage() {
   }
 
   const isAuthor = user?.user_id === post.user_id;
+
+  // 댓글 렌더링 컴포넌트
+  const renderComment = (comment: Comment) => {
+    const isCommentAuthor = user?.user_id === comment.user_id;
+    const isReplying = replyingTo === comment.id;
+    const depth = comment.depth || 0;
+
+    return (
+      <div key={comment.id} className={`${depth > 0 ? 'ml-8 mt-4 border-l-2 border-slate-200 pl-4' : ''}`}>
+        <div className="bg-slate-50 rounded-lg p-4 mb-3">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-slate-500" />
+              <span className="font-medium text-sm">{comment.author_nickname || '익명'}</span>
+              <span className="text-xs text-slate-500">{formatDate(comment.crt_dt)}</span>
+              {comment.scr_yn && (
+                <Badge variant="secondary" className="text-xs">비밀</Badge>
+              )}
+            </div>
+            {isCommentAuthor && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteComment(comment.id)}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+          
+          <div className="text-slate-800 mb-3 whitespace-pre-wrap">{comment.cn}</div>
+          
+          <div className="flex items-center gap-4 text-sm">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleCommentLike(comment.id)}
+              className={`h-7 px-2 ${comment.is_liked ? 'text-red-600' : 'text-slate-600'}`}
+            >
+              <Heart className={`h-3 w-3 mr-1 ${comment.is_liked ? 'fill-red-500 text-red-500' : ''}`} />
+              {comment.lk_cnt}
+            </Button>
+            
+            {depth < 5 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setReplyingTo(isReplying ? null : comment.id);
+                  setReplyContent('');
+                }}
+                className="h-7 px-2 text-slate-600"
+              >
+                <Reply className="h-3 w-3 mr-1" />
+                답글
+              </Button>
+            )}
+          </div>
+
+          {/* 답글 작성 폼 */}
+          {isReplying && (
+            <div className="mt-3 pt-3 border-t border-slate-200">
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="답글을 입력하세요..."
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  className="min-h-[80px] resize-none"
+                />
+                <div className="flex flex-col gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSubmitReply(comment.id)}
+                    disabled={commentLoading || !replyContent.trim()}
+                    className="h-8"
+                  >
+                    <Send className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setReplyingTo(null);
+                      setReplyContent('');
+                    }}
+                    className="h-8"
+                  >
+                    취소
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 하위 답글 표시/숨김 버튼 */}
+        {comment.children && comment.children.length > 0 && (
+          <div className="mt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleCommentExpansion(comment.id)}
+              className="h-7 px-2 text-slate-600 hover:text-slate-800"
+            >
+              {expandedComments.has(comment.id) ? (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  하위 답글 숨기기 ({getChildCommentCount(comment)}건)
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3 mr-1" />
+                  하위 답글 보기 ({getChildCommentCount(comment)}건)
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* 대댓글 렌더링 */}
+        {comment.children && comment.children.length > 0 && expandedComments.has(comment.id) && (
+          <div className="mt-2">
+            {comment.children.map(child => renderComment(child))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
@@ -361,7 +688,7 @@ export default function PostDetailPage() {
             </CardContent>
           </Card>
 
-          {/* 댓글 영역 (추후 구현) */}
+          {/* 댓글 영역 */}
           <Card className="bg-white/90 backdrop-blur-sm border border-white/20 shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -369,12 +696,41 @@ export default function PostDetailPage() {
                 댓글 {post.cmt_cnt > 0 && `(${post.cmt_cnt})`}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-slate-500">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>댓글이 없습니다.</p>
-                <p className="text-sm mt-1">첫 번째 댓글을 작성해보세요.</p>
+            <CardContent className="space-y-6">
+              {/* 댓글 작성 폼 */}
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="댓글을 입력하세요..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  className="min-h-[100px] resize-none"
+                />
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSubmitComment}
+                    disabled={commentLoading || !newComment.trim()}
+                    className="flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    댓글 작성
+                  </Button>
+                </div>
               </div>
+
+              <Separator />
+
+              {/* 댓글 목록 */}
+              {comments.length > 0 ? (
+                <div className="space-y-4">
+                  {comments.map(comment => renderComment(comment))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>댓글이 없습니다.</p>
+                  <p className="text-sm mt-1">첫 번째 댓글을 작성해보세요.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

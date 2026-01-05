@@ -224,3 +224,59 @@ export const postApi = {
   unfollowBoard: (boardId: number) =>
     del<void>(`/api/v1/board-extra/follow/${boardId}?follow_type=BOARD`),
 };
+
+// 댓글 관련 타입들
+export interface Comment {
+  id: number;
+  post_id: number;
+  user_id: string;
+  cn: string;
+  parent_id?: number;
+  scr_yn: boolean;
+  stts: 'PUBLISHED' | 'DELETED' | 'HIDDEN' | 'SECRET';
+  lk_cnt: number;
+  depth: number;
+  sort_order: number;
+  crt_dt: string;
+  upd_dt?: string;
+  use_yn: boolean;
+  author_nickname?: string;
+  is_liked?: boolean;
+  children?: Comment[];
+}
+
+export interface CommentCreate {
+  post_id: number;
+  cn: string;
+  parent_id?: number;
+  scr_yn?: boolean;
+}
+
+export interface CommentUpdate {
+  cn?: string;
+  scr_yn?: boolean;
+  stts?: 'PUBLISHED' | 'DELETED' | 'HIDDEN' | 'SECRET';
+}
+
+// 댓글 API 함수들
+export const commentApi = {
+  // 댓글 목록 조회
+  getComments: (postId: number) =>
+    get<Comment[]>(`/api/v1/boards/posts/${postId}/comments`),
+
+  // 댓글 생성
+  createComment: (data: CommentCreate) =>
+    post<Comment>('/api/v1/boards/comments', data),
+
+  // 댓글 수정
+  updateComment: (commentId: number, data: CommentUpdate) =>
+    put<Comment>(`/api/v1/boards/comments/${commentId}`, data),
+
+  // 댓글 삭제
+  deleteComment: (commentId: number) =>
+    del<void>(`/api/v1/boards/comments/${commentId}`),
+
+  // 댓글 좋아요 토글
+  toggleLike: (commentId: number) =>
+    post<{ liked: boolean; like_count: number }>(`/api/v1/boards/comments/${commentId}/like`),
+};

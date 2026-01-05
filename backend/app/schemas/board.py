@@ -282,6 +282,9 @@ class CommentResponse(CommentBase):
     is_liked: Optional[bool] = None
     children: Optional[List['CommentResponse']] = None
 
+    class Config:
+        from_attributes = True
+
 
 # 첨부파일 스키마
 class AttachmentCreate(BaseModel):

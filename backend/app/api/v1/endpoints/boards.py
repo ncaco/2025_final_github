@@ -695,11 +695,12 @@ async def create_comment(
         )
 
     # 부모 댓글 확인 (대댓글인 경우)
+    parent_depth = 0
     if comment.parent_id:
         parent_comment = db.query(BbsComment).filter(
             BbsComment.id == comment.parent_id,
             BbsComment.post_id == comment.post_id,
-            BbsComment.del_yn == False
+            BbsComment.stts != CommentStatus.DELETED
         ).first()
 
         if not parent_comment:
@@ -708,16 +709,50 @@ async def create_comment(
                 detail="부모 댓글을 찾을 수 없습니다"
             )
 
+        # 부모 댓글의 depth 확인 (최대 5단계까지 허용)
+        parent_depth = parent_comment.depth
+        if parent_depth >= 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="답글의 깊이가 너무 깊습니다. 최대 5단계까지 가능합니다."
+            )
+
     # 댓글 생성
     db_comment = BbsComment(
         **comment.dict(),
         user_id=current_user.user_id,
-        depth=1 if comment.parent_id else 0
+        depth=parent_depth + 1 if comment.parent_id else 0
     )
     db.add(db_comment)
     db.commit()
     db.refresh(db_comment)
-    return db_comment
+
+    # 작성자 닉네임 조회
+    author = db.query(CommonUser).filter(
+        CommonUser.user_id == db_comment.user_id
+    ).first()
+
+    # 댓글 데이터를 딕셔너리로 변환
+    comment_dict = {
+        'id': db_comment.id,
+        'post_id': db_comment.post_id,
+        'user_id': db_comment.user_id,
+        'cn': db_comment.cn,
+        'parent_id': db_comment.parent_id,
+        'scr_yn': db_comment.scr_yn,
+        'stts': db_comment.stts,
+        'lk_cnt': db_comment.lk_cnt,
+        'depth': db_comment.depth,
+        'sort_order': db_comment.sort_order,
+        'crt_dt': db_comment.crt_dt,
+        'upd_dt': db_comment.upd_dt,
+        'use_yn': True,
+        'author_nickname': author.nickname if author else '익명',
+        'is_liked': False,
+        'children': []
+    }
+
+    return CommentResponse(**comment_dict)
 
 
 @router.get(
@@ -751,7 +786,7 @@ async def get_comments_by_post(
         CommonUser, BbsComment.user_id == CommonUser.user_id
     ).filter(
         BbsComment.post_id == post_id,
-        BbsComment.del_yn == False
+        BbsComment.stts != CommentStatus.DELETED
     ).order_by(BbsComment.depth, BbsComment.sort_order, BbsComment.crt_dt).all()
 
     # 응답 포맷팅
@@ -764,14 +799,192 @@ async def get_comments_by_post(
         ).first()
         is_liked = comment_like is not None
 
-        comment_dict = CommentResponse.from_orm(comment).dict()
-        comment_dict.update({
+        # 댓글 데이터를 딕셔너리로 변환
+        comment_dict = {
+            'id': comment.id,
+            'post_id': comment.post_id,
+            'user_id': comment.user_id,
+            'cn': comment.cn,
+            'parent_id': comment.parent_id,
+            'scr_yn': comment.scr_yn,
+            'stts': comment.stts,
+            'lk_cnt': comment.lk_cnt,
+            'depth': comment.depth,
+            'sort_order': comment.sort_order,
+            'crt_dt': comment.crt_dt,
+            'upd_dt': comment.upd_dt,
+            'use_yn': True,  # 기본값 설정
             'author_nickname': author_nickname,
-            'is_liked': is_liked
-        })
+            'is_liked': is_liked,
+            'children': []
+        }
         comment_list.append(CommentResponse(**comment_dict))
 
     return comment_list
+
+
+@router.put(
+    "/comments/{comment_id}",
+    response_model=CommentResponse,
+    summary="댓글 수정",
+    description="댓글을 수정합니다."
+)
+async def update_comment(
+    comment_id: int = Path(..., description="댓글 ID"),
+    comment_update: CommentUpdate = None,
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """댓글 수정"""
+    # 댓글 존재 확인
+    comment = db.query(BbsComment).filter(
+        BbsComment.id == comment_id,
+        BbsComment.stts != CommentStatus.DELETED
+    ).first()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="댓글을 찾을 수 없습니다"
+        )
+
+    # 작성자 확인
+    if comment.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="댓글을 수정할 권한이 없습니다"
+        )
+
+    # 댓글 수정
+    if comment_update.cn is not None:
+        comment.cn = comment_update.cn
+    if comment_update.scr_yn is not None:
+        comment.scr_yn = comment_update.scr_yn
+    if comment_update.stts is not None:
+        comment.stts = comment_update.stts
+
+    db.commit()
+    db.refresh(comment)
+
+    # 작성자 닉네임 조회
+    author = db.query(CommonUser).filter(
+        CommonUser.user_id == comment.user_id
+    ).first()
+
+    # 댓글 데이터를 딕셔너리로 변환
+    comment_dict = {
+        'id': comment.id,
+        'post_id': comment.post_id,
+        'user_id': comment.user_id,
+        'cn': comment.cn,
+        'parent_id': comment.parent_id,
+        'scr_yn': comment.scr_yn,
+        'stts': comment.stts,
+        'lk_cnt': comment.lk_cnt,
+        'depth': comment.depth,
+        'sort_order': comment.sort_order,
+        'crt_dt': comment.crt_dt,
+        'upd_dt': comment.upd_dt,
+        'use_yn': True,
+        'author_nickname': author.nickname if author else '익명',
+        'is_liked': False,
+        'children': []
+    }
+
+    return CommentResponse(**comment_dict)
+
+
+@router.delete(
+    "/comments/{comment_id}",
+    summary="댓글 삭제",
+    description="댓글을 삭제합니다."
+)
+async def delete_comment(
+    comment_id: int = Path(..., description="댓글 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """댓글 삭제"""
+    # 댓글 존재 확인
+    comment = db.query(BbsComment).filter(
+        BbsComment.id == comment_id,
+        BbsComment.stts != CommentStatus.DELETED
+    ).first()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="댓글을 찾을 수 없습니다"
+        )
+
+    # 작성자 확인
+    if comment.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="댓글을 삭제할 권한이 없습니다"
+        )
+
+    # 댓글 삭제 (소프트 삭제)
+    comment.stts = CommentStatus.DELETED
+    db.commit()
+
+    return {"message": "댓글이 삭제되었습니다"}
+
+
+@router.post(
+    "/comments/{comment_id}/like",
+    summary="댓글 좋아요 토글",
+    description="댓글에 좋아요를 추가하거나 제거합니다."
+)
+async def toggle_comment_like(
+    comment_id: int = Path(..., description="댓글 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """댓글 좋아요 토글"""
+    # 댓글 존재 확인
+    comment = db.query(BbsComment).filter(
+        BbsComment.id == comment_id,
+        BbsComment.stts != CommentStatus.DELETED
+    ).first()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="댓글을 찾을 수 없습니다"
+        )
+
+    # 기존 좋아요 확인
+    existing_like = db.query(BbsCommentLike).filter(
+        BbsCommentLike.comment_id == comment_id,
+        BbsCommentLike.user_id == current_user.user_id
+    ).first()
+
+    if existing_like:
+        # 좋아요 제거
+        db.delete(existing_like)
+        liked = False
+    else:
+        # 좋아요 추가
+        new_like = BbsCommentLike(
+            comment_id=comment_id,
+            user_id=current_user.user_id,
+            typ=LikeType.LIKE
+        )
+        db.add(new_like)
+        liked = True
+
+    db.commit()
+
+    # 좋아요 수 조회
+    like_count = db.query(func.count(BbsCommentLike.id)).filter(
+        BbsCommentLike.comment_id == comment_id
+    ).scalar()
+
+    return {
+        "liked": liked,
+        "like_count": like_count
+    }
 
 
 # 좋아요 엔드포인트
