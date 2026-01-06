@@ -801,6 +801,29 @@ CREATE TABLE bbs_file_thumbnails (
 -- 파일 썸네일 인덱스
 CREATE INDEX idx_bbs_file_thumbnails_attachment ON bbs_file_thumbnails(attachment_id);
 
+-- 게시글 조회수 기록 테이블
+CREATE TABLE bbs_post_views (
+    id BIGSERIAL PRIMARY KEY,
+    post_id BIGINT NOT NULL REFERENCES bbs_posts(id) ON DELETE CASCADE,
+    user_id VARCHAR(100) REFERENCES public.COMMON_USER(USER_ID) ON DELETE SET NULL,
+    ip_addr INET NOT NULL,
+    user_agent TEXT,
+    crt_dt TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 게시글 조회수 기록 인덱스
+CREATE INDEX idx_bbs_post_views_post_crt_dt ON bbs_post_views(post_id, crt_dt);
+CREATE INDEX idx_bbs_post_views_user_post_date ON bbs_post_views(user_id, post_id, date_trunc('day', crt_dt AT TIME ZONE 'UTC')) WHERE user_id IS NOT NULL;
+CREATE INDEX idx_bbs_post_views_ip_post_date ON bbs_post_views(ip_addr, post_id, date_trunc('day', crt_dt AT TIME ZONE 'UTC')) WHERE user_id IS NULL;
+
+-- 게시글 조회수 기록 유니크 제약조건 (하루에 한 번만 카운트)
+-- 로그인 사용자: (post_id, user_id, DATE(crt_dt))
+-- 비로그인 사용자: (post_id, ip_addr, DATE(crt_dt))
+-- PostgreSQL의 부분 유니크 인덱스를 사용하여 구현
+-- date_trunc('day', crt_dt AT TIME ZONE 'UTC')는 UTC로 변환 후 날짜 추출하여 IMMUTABLE 보장
+CREATE UNIQUE INDEX idx_bbs_post_views_user_unique ON bbs_post_views(post_id, user_id, date_trunc('day', crt_dt AT TIME ZONE 'UTC')) WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_bbs_post_views_ip_unique ON bbs_post_views(post_id, ip_addr, date_trunc('day', crt_dt AT TIME ZONE 'UTC')) WHERE user_id IS NULL;
+
 -- ENUM 타입들은 위쪽에서 이미 정의됨
 
 -- 트리거 함수: 태그 사용 카운트 자동 갱신
@@ -835,6 +858,7 @@ COMMENT ON TABLE bbs_search_logs IS '검색 로그';
 COMMENT ON TABLE bbs_admin_logs IS '관리자 작업 로그';
 COMMENT ON TABLE bbs_statistics IS '통계 데이터';
 COMMENT ON TABLE bbs_file_thumbnails IS '파일 썸네일 정보';
+COMMENT ON TABLE bbs_post_views IS '게시글 조회수 기록';
 
 -- COMMON_USER 테이블 코멘트는 기존 시스템에서 관리
 COMMENT ON TABLE bbs_boards IS '게시판 기본 정보';
@@ -1092,3 +1116,12 @@ COMMENT ON COLUMN bbs_file_thumbnails.thumbnail_sz IS '썸네일 크기 (바이�
 COMMENT ON COLUMN bbs_file_thumbnails.width IS '썸네일 너비';
 COMMENT ON COLUMN bbs_file_thumbnails.height IS '썸네일 높이';
 COMMENT ON COLUMN bbs_file_thumbnails.crt_dt IS '생성일시';
+
+-- 게시글 조회수 기록 테이블
+COMMENT ON TABLE bbs_post_views IS '게시글 조회수 기록';
+COMMENT ON COLUMN bbs_post_views.id IS '조회 기록 일련번호';
+COMMENT ON COLUMN bbs_post_views.post_id IS '게시글 ID';
+COMMENT ON COLUMN bbs_post_views.user_id IS '사용자 ID (NULL 가능, 비로그인 사용자)';
+COMMENT ON COLUMN bbs_post_views.ip_addr IS 'IP 주소';
+COMMENT ON COLUMN bbs_post_views.user_agent IS '사용자 에이전트';
+COMMENT ON COLUMN bbs_post_views.crt_dt IS '조회 일시';

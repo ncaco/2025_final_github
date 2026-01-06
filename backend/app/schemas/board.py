@@ -123,6 +123,8 @@ class BoardResponse(BoardBase):
     id: int
     actv_yn: bool
     post_count: int
+    total_view_count: Optional[int] = 0
+    follower_count: Optional[int] = 0
     crt_dt: datetime
     upd_dt: Optional[datetime]
     use_yn: Optional[bool] = True

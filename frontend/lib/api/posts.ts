@@ -202,8 +202,12 @@ export const postApi = {
     get<PostListResponse>('/api/v1/boards/posts', { params }),
 
   // 게시글 상세 조회
-  getPost: (postId: number) =>
-    get<PostDetail>(`/api/v1/boards/posts/${postId}`),
+  getPost: (postId: number, password?: string) =>
+    get<PostDetail>(`/api/v1/boards/posts/${postId}`, password ? { params: { password } } : {}),
+
+  // 비밀글 비밀번호 검증
+  verifyPassword: (postId: number, password: string) =>
+    post<{ verified: boolean }>(`/api/v1/boards/posts/${postId}/verify-password`, { password }),
 
   // 게시글 수정
   updatePost: (postId: number, data: PostUpdate) =>

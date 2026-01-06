@@ -1,14 +1,15 @@
 """게시판 관련 엔드포인트"""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, UploadFile, File
+from datetime import date, datetime
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, UploadFile, File, Body, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, text
+from sqlalchemy import and_, or_, func, text, cast, Date
 from app.database import get_db
 from app.models.board import (
     BbsBoard, BbsCategory, BbsPost, BbsComment, BbsAttachment,
     BbsPostLike, BbsCommentLike, BbsBookmark, BbsReport, BbsNotification,
-    BbsTag, BbsPostTag, BbsFollow, PostStatus, CommentStatus,
-    LikeType, ReportTargetType, BoardType, PermissionLevel
+    BbsTag, BbsPostTag, BbsFollow, BbsPostView, PostStatus, CommentStatus,
+    LikeType, ReportTargetType, BoardType, PermissionLevel, FollowType
 )
 from app.models.user import CommonUser
 from app.dependencies import get_current_active_user, is_admin_user
@@ -24,6 +25,87 @@ from app.schemas.board import (
 )
 
 router = APIRouter()
+
+
+def get_client_ip(request: Request) -> str:
+    """클라이언트 IP 주소 추출"""
+    # X-Forwarded-For 헤더 확인 (프록시/로드밸런서 뒤에 있는 경우)
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        # 여러 IP가 있을 수 있으므로 첫 번째 IP 사용
+        ip = x_forwarded_for.split(",")[0].strip()
+    else:
+        # 직접 연결인 경우
+        ip = request.client.host if request.client else "127.0.0.1"
+
+    # IPv4 주소 검증 및 정리
+    ip = ip.split(":")[0] if ":" in ip else ip  # IPv6에서 IPv4 부분만 추출
+    return ip
+
+
+def increment_post_view_count(
+    post_id: int,
+    user_id: Optional[str],
+    ip_addr: str,
+    user_agent: Optional[str],
+    db: Session
+) -> bool:
+    """
+    게시글 조회수 증가 (중복 체크 포함)
+    
+    Args:
+        post_id: 게시글 ID
+        user_id: 사용자 ID (None이면 비로그인 사용자)
+        ip_addr: IP 주소
+        user_agent: User-Agent 헤더
+        db: 데이터베이스 세션
+        
+    Returns:
+        조회수가 증가했으면 True, 중복이면 False
+    """
+    today = date.today()
+    
+    # 중복 체크: 로그인 사용자는 user_id로, 비로그인 사용자는 ip_addr로 체크
+    # date_trunc('day', crt_dt AT TIME ZONE 'UTC')를 사용하여 날짜 부분만 비교 (인덱스와 일치)
+    # UTC로 변환하여 타임존 문제 방지
+    today_start = datetime.combine(today, datetime.min.time())
+    
+    if user_id:
+        # 로그인 사용자: (post_id, user_id, DATE(crt_dt))로 중복 체크
+        existing_view = db.query(BbsPostView).filter(
+            BbsPostView.post_id == post_id,
+            BbsPostView.user_id == user_id,
+            func.date_trunc('day', func.timezone('UTC', BbsPostView.crt_dt)) == func.date_trunc('day', func.timezone('UTC', today_start))
+        ).first()
+    else:
+        # 비로그인 사용자: (post_id, ip_addr, DATE(crt_dt))로 중복 체크
+        existing_view = db.query(BbsPostView).filter(
+            BbsPostView.post_id == post_id,
+            BbsPostView.user_id.is_(None),
+            BbsPostView.ip_addr == ip_addr,
+            func.date_trunc('day', func.timezone('UTC', BbsPostView.crt_dt)) == func.date_trunc('day', func.timezone('UTC', today_start))
+        ).first()
+    
+    # 중복이면 조회수 증가하지 않음
+    if existing_view:
+        return False
+    
+    # 조회 기록 추가
+    new_view = BbsPostView(
+        post_id=post_id,
+        user_id=user_id,
+        ip_addr=ip_addr,
+        user_agent=user_agent
+    )
+    db.add(new_view)
+    
+    # 게시글 조회수 증가
+    post = db.query(BbsPost).filter(BbsPost.id == post_id).first()
+    if post:
+        post.vw_cnt += 1
+    
+    db.commit()
+    return True
 
 
 # 게시판 관리 엔드포인트
@@ -79,13 +161,30 @@ async def get_boards(
 
     boards = query.order_by(BbsBoard.sort_order, BbsBoard.crt_dt.desc()).offset(skip).limit(limit).all()
 
-    # 각 게시판의 실제 게시물 개수 계산 (삭제된 게시물 제외)
+    # 각 게시판의 실제 게시물 개수, 총 조회수, 팔로워 수 계산
     for board in boards:
+        # 게시물 개수 계산 (삭제된 게시물 제외)
         actual_post_count = db.query(func.count(BbsPost.id)).filter(
             BbsPost.board_id == board.id,
             BbsPost.stts == PostStatus.PUBLISHED  # 삭제된 게시물 제외
         ).scalar()
         board.post_count = actual_post_count or 0
+
+        # 총 조회수 계산 (bbs_post_views 테이블 기반, PUBLISHED 상태의 게시글만)
+        total_view_count = db.query(func.count(BbsPostView.id)).join(
+            BbsPost, BbsPostView.post_id == BbsPost.id
+        ).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.stts == PostStatus.PUBLISHED
+        ).scalar() or 0
+        board.total_view_count = int(total_view_count)
+
+        # 팔로워 수 계산
+        follower_count = db.query(func.count(BbsFollow.id)).filter(
+            BbsFollow.following_id == str(board.id),
+            BbsFollow.typ == FollowType.BOARD
+        ).scalar() or 0
+        board.follower_count = follower_count
 
     return boards
 
@@ -119,6 +218,22 @@ async def get_board(
     ).scalar()
     board.post_count = actual_post_count or 0
 
+    # 총 조회수 계산 (bbs_post_views 테이블 기반, PUBLISHED 상태의 게시글만)
+    total_view_count = db.query(func.count(BbsPostView.id)).join(
+        BbsPost, BbsPostView.post_id == BbsPost.id
+    ).filter(
+        BbsPost.board_id == board.id,
+        BbsPost.stts == PostStatus.PUBLISHED
+    ).scalar() or 0
+    board.total_view_count = int(total_view_count)
+
+    # 팔로워 수 계산
+    follower_count = db.query(func.count(BbsFollow.id)).filter(
+        BbsFollow.following_id == str(board.id),
+        BbsFollow.typ == FollowType.BOARD
+    ).scalar() or 0
+    board.follower_count = follower_count
+
     return board
 
 
@@ -144,8 +259,10 @@ async def get_board_statistics(
             detail="게시판을 찾을 수 없습니다"
         )
 
-    # 총 조회수 계산 (PUBLISHED 상태의 게시글만)
-    total_view_count = db.query(func.sum(BbsPost.vw_cnt)).filter(
+    # 총 조회수 계산 (bbs_post_views 테이블 기반, PUBLISHED 상태의 게시글만)
+    total_view_count = db.query(func.count(BbsPostView.id)).join(
+        BbsPost, BbsPostView.post_id == BbsPost.id
+    ).filter(
         BbsPost.board_id == board_id,
         BbsPost.stts == PostStatus.PUBLISHED
     ).scalar() or 0
@@ -346,8 +463,15 @@ async def create_post(
             )
 
     # 게시글 생성
+    post_data = post.dict(exclude={'tags'})
+    
+    # 비밀글인 경우 비밀번호 해시 처리
+    if post_data.get('scr_yn') and post_data.get('pwd'):
+        from app.core.security import get_password_hash
+        post_data['pwd'] = get_password_hash(post_data['pwd'])
+    
     db_post = BbsPost(
-        **post.dict(exclude={'tags'}),
+        **post_data,
         user_id=current_user.user_id
     )
     db.add(db_post)
@@ -437,6 +561,18 @@ async def get_posts(
         post_dict['author_nickname'] = author_nickname
         post_dict['category_nm'] = category_nm
 
+        # 조회수 계산 (bbs_post_views 테이블 기반)
+        view_count = db.query(func.count(BbsPostView.id)).filter(
+            BbsPostView.post_id == post.id
+        ).scalar() or 0
+        post_dict['vw_cnt'] = int(view_count)
+
+        # 비밀글 처리: 본인 글이 아니면 제목과 요약 숨기기
+        if post.scr_yn and post.user_id != current_user.user_id:
+            post_dict['ttl'] = '비밀글입니다'
+            post_dict['smmry'] = None
+            post_dict['cn'] = ''  # 내용도 숨김
+
         # 태그 정보 조회
         tags = db.query(BbsTag.nm).join(
             BbsPostTag, BbsTag.id == BbsPostTag.tag_id
@@ -466,11 +602,13 @@ async def get_posts(
 )
 async def get_post(
     post_id: int = Path(..., description="게시글 ID"),
+    access_token: Optional[str] = Query(None, description="비밀글 접근 토큰"),
+    request: Request = None,
     db: Session = Depends(get_db),
     current_user: CommonUser = Depends(get_current_active_user)
 ):
     """게시글 상세 조회"""
-    # 게시글 조회 및 조회수 증가
+    # 게시글 조회
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
     ).first()
@@ -489,10 +627,33 @@ async def get_post(
                 detail="게시글을 찾을 수 없습니다"
             )
 
+    # 비밀글 처리: 본인 글이 아니면 접근 토큰 확인 필요
+    if post.scr_yn and post.user_id != current_user.user_id:
+        if not access_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="비밀글은 비밀번호가 필요합니다"
+            )
+        
+        # 접근 토큰 검증
+        from app.core.security import verify_secret_post_access_token
+        if not verify_secret_post_access_token(access_token, post_id, current_user.user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="유효하지 않은 접근 토큰입니다"
+            )
+
     # 조회수 증가 (삭제된 게시물은 조회수 증가하지 않음)
     if post.stts != PostStatus.DELETED:
-        post.vw_cnt += 1
-        db.commit()
+        ip_addr = get_client_ip(request)
+        user_agent = request.headers.get("user-agent")
+        increment_post_view_count(
+            post_id=post_id,
+            user_id=current_user.user_id,
+            ip_addr=ip_addr,
+            user_agent=user_agent,
+            db=db
+        )
 
     # 작성자 정보
     author = db.query(CommonUser).filter(CommonUser.user_id == post.user_id).first()
@@ -530,9 +691,15 @@ async def get_post(
     ).first()
     is_bookmarked = bookmark is not None
 
+    # 조회수 계산 (bbs_post_views 테이블 기반)
+    view_count = db.query(func.count(BbsPostView.id)).filter(
+        BbsPostView.post_id == post_id
+    ).scalar() or 0
+
     # 응답 구성
     post_dict = PostDetailResponse.from_orm(post).dict()
     post_dict.update({
+        'vw_cnt': int(view_count),  # bbs_post_views 테이블 기반 조회수
         'author_nickname': author_nickname,
         'category_nm': category_nm,
         'tags': tag_names,
@@ -542,6 +709,66 @@ async def get_post(
     })
 
     return PostDetailResponse(**post_dict)
+
+
+@router.post(
+    "/posts/{post_id}/verify-password",
+    summary="비밀글 비밀번호 검증",
+    description="비밀글의 비밀번호를 검증하고 접근 토큰을 발급합니다."
+)
+async def verify_post_password(
+    post_id: int = Path(..., description="게시글 ID"),
+    password: str = Body(..., embed=True, description="비밀번호"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """비밀글 비밀번호 검증 및 접근 토큰 발급"""
+    post = db.query(BbsPost).filter(
+        BbsPost.id == post_id,
+        BbsPost.scr_yn == True
+    ).first()
+
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="비밀글을 찾을 수 없습니다"
+        )
+
+    # 본인 글은 비밀번호 불필요하지만 토큰 발급
+    if post.user_id == current_user.user_id:
+        from app.core.security import create_secret_post_access_token
+        access_token = create_secret_post_access_token(
+            post_id=post_id,
+            user_id=current_user.user_id
+        )
+        return {"verified": True, "access_token": access_token}
+
+    # 비밀번호 검증
+    from app.core.security import verify_password, create_secret_post_access_token
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    if not post.pwd:
+        logger.warning(f"게시글 {post_id}의 비밀번호가 설정되지 않았습니다.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="비밀번호가 설정되지 않았습니다"
+        )
+    
+    if not verify_password(password, post.pwd):
+        logger.warning(f"게시글 {post_id}의 비밀번호 검증 실패 (입력된 비밀번호 길이: {len(password)})")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="비밀번호가 올바르지 않습니다"
+        )
+
+    # 비밀번호 검증 성공 시 접근 토큰 발급
+    access_token = create_secret_post_access_token(
+        post_id=post_id,
+        user_id=current_user.user_id
+    )
+    
+    return {"verified": True, "access_token": access_token}
 
 
 @router.put(
@@ -590,7 +817,14 @@ async def update_post(
         db.add(history)
 
     # 게시글 업데이트
-    for field, value in post_update.dict(exclude_unset=True, exclude={'tags', 'change_rsn'}).items():
+    update_data = post_update.dict(exclude_unset=True, exclude={'tags', 'change_rsn'})
+    
+    # 비밀번호가 변경되는 경우 해시 처리
+    if 'pwd' in update_data and update_data['pwd']:
+        from app.core.security import get_password_hash
+        update_data['pwd'] = get_password_hash(update_data['pwd'])
+    
+    for field, value in update_data.items():
         setattr(post, field, value)
 
     # 태그 업데이트
@@ -1174,6 +1408,13 @@ async def search_posts(
     for post, author_nickname, board_nm in results:
         post_dict = PostResponse.from_orm(post).dict()
         post_dict['author_nickname'] = author_nickname
+        
+        # 조회수 계산 (bbs_post_views 테이블 기반)
+        view_count = db.query(func.count(BbsPostView.id)).filter(
+            BbsPostView.post_id == post.id
+        ).scalar() or 0
+        post_dict['vw_cnt'] = int(view_count)
+        
         post_list.append(PostResponse(**post_dict))
 
     total_pages = (total_count + limit - 1) // limit
@@ -1199,12 +1440,11 @@ async def get_popular_posts(
     db: Session = Depends(get_db)
 ):
     """인기 게시글 조회"""
-    # 인기도 점수 계산 (조회수 + 좋아요*10 + 댓글*5)
+    # 게시글 조회 (인기도 점수는 나중에 계산)
     posts = db.query(
         BbsPost,
         CommonUser.nickname.label('author_nickname'),
-        BbsBoard.nm.label('board_nm'),
-        (BbsPost.vw_cnt + BbsPost.lk_cnt * 10 + BbsPost.cmt_cnt * 5).label('popularity_score')
+        BbsBoard.nm.label('board_nm')
     ).join(
         CommonUser, BbsPost.user_id == CommonUser.user_id
     ).join(
@@ -1212,26 +1452,34 @@ async def get_popular_posts(
     ).filter(
         BbsPost.stts == PostStatus.PUBLISHED,
         BbsPost.stts != PostStatus.DELETED  # 삭제된 게시물 제외
-    ).order_by(
-        (BbsPost.vw_cnt + BbsPost.lk_cnt * 10 + BbsPost.cmt_cnt * 5).desc()
-    ).limit(limit).all()
+    ).limit(limit * 2).all()  # 더 많이 가져온 후 정렬
 
     result = []
-    for post, author_nickname, board_nm, score in posts:
+    for post, author_nickname, board_nm in posts:
+        # 조회수 계산 (bbs_post_views 테이블 기반)
+        view_count = db.query(func.count(BbsPostView.id)).filter(
+            BbsPostView.post_id == post.id
+        ).scalar() or 0
+        
+        # 인기도 점수 계산 (조회수 + 좋아요*10 + 댓글*5)
+        popularity_score = int(view_count) + post.lk_cnt * 10 + post.cmt_cnt * 5
+        
         post_dict = PopularPostResponse(
             id=post.id,
             ttl=post.ttl,
-            vw_cnt=post.vw_cnt,
+            vw_cnt=int(view_count),  # bbs_post_views 테이블 기반 조회수
             lk_cnt=post.lk_cnt,
             cmt_cnt=post.cmt_cnt,
             author_nickname=author_nickname,
             board_nm=board_nm,
             crt_dt=post.crt_dt,
-            popularity_score=score
+            popularity_score=popularity_score
         )
         result.append(post_dict)
 
-    return result
+    # 인기도 점수로 정렬하고 상위 limit개만 반환
+    result.sort(key=lambda x: x.popularity_score, reverse=True)
+    return result[:limit]
 
 
 # 임시 엔드포인트: DB 함수 및 트리거 업데이트

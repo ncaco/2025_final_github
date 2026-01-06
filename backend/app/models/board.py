@@ -592,3 +592,25 @@ class BbsStatistic(BaseModel):
         UniqueConstraint("stat_typ", "stat_key", "stat_period", "period_start", name="uq_statistics_type_key_period"),
         Index("idx_bbs_statistics_typ_period", "stat_typ", "stat_period", "period_start"),
     )
+
+
+class BbsPostView(Base):
+    """게시글 조회수 기록 테이블"""
+    __tablename__ = "bbs_post_views"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, comment="조회 기록 일련번호")
+    post_id = Column(BigInteger, ForeignKey("bbs_posts.id", ondelete="CASCADE"), nullable=False, comment="게시글 ID")
+    user_id = Column(String(100), ForeignKey("common_user.user_id", ondelete="SET NULL"), comment="사용자 ID (NULL 가능)")
+    ip_addr = Column(INET, nullable=False, comment="IP 주소")
+    user_agent = Column(Text, comment="사용자 에이전트")
+    crt_dt = Column(DateTime, default=func.current_timestamp(), nullable=False, comment="조회 일시")
+
+    # 관계
+    post = relationship("BbsPost", backref="view_records")
+
+    # 인덱스
+    __table_args__ = (
+        Index("idx_bbs_post_views_post_crt_dt", "post_id", "crt_dt"),
+        Index("idx_bbs_post_views_user_post_date", "user_id", "post_id", func.date("crt_dt")),
+        Index("idx_bbs_post_views_ip_post_date", "ip_addr", "post_id", func.date("crt_dt")),
+    )

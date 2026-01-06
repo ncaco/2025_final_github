@@ -6,12 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { boardApi } from '@/lib/api/boards';
-import { Board, BoardType, PermissionLevel } from '@/types/board';
+import { Board, BoardType } from '@/types/board';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
-import { Plus, MessageSquare, FileText, HelpCircle, ImageIcon, Video, Megaphone, TrendingUp, Heart } from 'lucide-react';
+import { Plus, MessageSquare, FileText, HelpCircle, ImageIcon, Video, Megaphone, TrendingUp, Heart, Eye, User } from 'lucide-react';
 
 type BoardTab = 'all' | 'popular' | 'followed';
 
@@ -246,11 +246,23 @@ export default function BoardsPage() {
                             )}
 
                             {/* 통계 정보 */}
-                            <div className="flex items-center gap-4 text-sm text-slate-500">
+                            <div className="flex items-center gap-4 text-sm text-slate-500 flex-wrap">
                               <div className="flex items-center gap-1">
                                 <MessageSquare className="h-4 w-4" />
                                 <span className="font-medium">{board.post_count?.toLocaleString() || 0}개의 게시글</span>
                               </div>
+                              {board.total_view_count !== undefined && (
+                                <div className="flex items-center gap-1">
+                                  <Eye className="h-4 w-4" />
+                                  <span className="font-medium">조회수 {board.total_view_count.toLocaleString()}</span>
+                                </div>
+                              )}
+                              {board.follower_count !== undefined && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-4 w-4" />
+                                  <span className="font-medium">팔로워 {board.follower_count.toLocaleString()}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

@@ -189,8 +189,12 @@ export const postApi = {
     get<Post[]>(`/api/v1/boards/boards/${boardId}/posts`, { params }),
 
   // 게시글 상세 조회
-  getPost: (postId: number) =>
-    get<Post>(`/api/v1/boards/posts/${postId}`),
+  getPost: (postId: number, accessToken?: string) =>
+    get<Post>(`/api/v1/boards/posts/${postId}`, accessToken ? { params: { access_token: accessToken } } : {}),
+
+  // 비밀글 비밀번호 검증
+  verifyPassword: (postId: number, password: string) =>
+    post<{ verified: boolean; access_token: string }>(`/api/v1/boards/posts/${postId}/verify-password`, { password }),
 
   // 게시글 생성
   createPost: (data: PostCreate) =>

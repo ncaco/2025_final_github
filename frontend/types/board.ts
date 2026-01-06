@@ -17,6 +17,8 @@ export interface Board {
   max_file_size: number;
   sort_order: number;
   post_count: number;
+  total_view_count?: number;
+  follower_count?: number;
   crt_dt: string;
   upd_dt?: string;
   use_yn: boolean;

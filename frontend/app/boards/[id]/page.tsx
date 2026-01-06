@@ -17,6 +17,8 @@ import { Post } from '@/types/post';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
 import { Search, Plus, MessageSquare, Eye, Heart, User, Calendar, ArrowLeft, Megaphone, Lock, FileText, HelpCircle, ImageIcon, Video, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 export default function BoardDetailPage() {
   const params = useParams();
@@ -31,8 +33,11 @@ export default function BoardDetailPage() {
   const [sortBy, setSortBy] = useState<string>('latest');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
-  const [totalViewCount, setTotalViewCount] = useState(0);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   const boardId = params.id as string;
 
@@ -43,14 +48,10 @@ export default function BoardDetailPage() {
     }
   }, [boardId]);
 
-  // 게시판 로딩 완료 후 팔로우 상태 및 팔로워 수 확인
+  // 게시판 로딩 완료 후 팔로우 상태 확인
   useEffect(() => {
-    if (board) {
-      loadFollowerCount();
-      loadBoardStatistics();
-      if (isAuthenticated) {
-        checkFollowStatus();
-      }
+    if (board && isAuthenticated) {
+      checkFollowStatus();
     }
   }, [board, isAuthenticated, user]);
 
@@ -95,25 +96,6 @@ export default function BoardDetailPage() {
     }
   };
 
-  const loadFollowerCount = async () => {
-    try {
-      const response = await get<{ follower_count: number }>(`/api/v1/board-extra/follow/count/board/${boardId}`);
-      setFollowerCount(response.follower_count);
-    } catch (error) {
-      console.error('팔로워 수 조회 실패:', error);
-    }
-  };
-
-  const loadBoardStatistics = async () => {
-    try {
-      const response = await get<{ board_id: number; total_view_count: number; post_count: number }>(
-        `/api/v1/boards/boards/${boardId}/statistics`
-      );
-      setTotalViewCount(response.total_view_count);
-    } catch (error) {
-      console.error('게시판 통계 조회 실패:', error);
-    }
-  };
 
   const handleFollowToggle = async () => {
     if (!isAuthenticated) {
@@ -130,7 +112,6 @@ export default function BoardDetailPage() {
       if (isFollowing) {
         await del<void>(`/api/v1/board-extra/follow/${boardId}?follow_type=BOARD`);
         setIsFollowing(false);
-        setFollowerCount(prev => Math.max(0, prev - 1)); // 팔로워 수 감소
         toast({
           title: '팔로우 취소',
           description: '게시판 팔로우를 취소했습니다.',
@@ -141,7 +122,6 @@ export default function BoardDetailPage() {
           { following_id: boardId.toString(), typ: 'BOARD' }
         );
         setIsFollowing(true);
-        setFollowerCount(prev => prev + 1); // 팔로워 수 증가
         toast({
           title: '팔로우 완료',
           description: '게시판을 팔로우했습니다.',
@@ -224,6 +204,42 @@ export default function BoardDetailPage() {
       VIDEO: 'outline',
     } as const;
     return colors[type] || 'default';
+  };
+
+  // 비밀번호 검증 및 게시글 상세 페이지로 이동
+  const handlePasswordSubmit = async () => {
+    if (!selectedPostId || !password.trim()) {
+      setPasswordError('비밀번호를 입력해주세요.');
+      return;
+    }
+
+    try {
+      setVerifyingPassword(true);
+      setPasswordError('');
+      
+      // 비밀번호 검증 및 접근 토큰 발급
+      const response = await postApi.verifyPassword(selectedPostId, password);
+      
+      // 검증 성공 시 게시글 상세 페이지로 이동 (접근 토큰을 쿼리 파라미터로 전달)
+      if (response.access_token) {
+        router.push(`/boards/${boardId}/posts/${selectedPostId}?token=${encodeURIComponent(response.access_token)}`);
+      } else {
+        // 토큰이 없는 경우 (본인 글 등)
+        router.push(`/boards/${boardId}/posts/${selectedPostId}`);
+      }
+      
+      // 다이얼로그 닫기
+      setShowPasswordDialog(false);
+      setPassword('');
+      setPasswordError('');
+      setSelectedPostId(null);
+    } catch (error: any) {
+      console.error('비밀번호 검증 실패:', error);
+      const errorMessage = error?.data?.detail || error?.message || '비밀번호가 올바르지 않습니다.';
+      setPasswordError(errorMessage);
+    } finally {
+      setVerifyingPassword(false);
+    }
   };
 
   // 게시판 타입별 설정
@@ -389,14 +405,18 @@ export default function BoardDetailPage() {
                           <span className="font-medium">{board.post_count?.toLocaleString() || 0}</span>
                           <span>게시글</span>
                         </div>
-                        <div className="hidden sm:flex items-center gap-1">
-                          <Eye className="h-4 w-4" />
-                          <span>총 조회수: {totalViewCount.toLocaleString()}</span>
-                        </div>
-                        <div className="hidden md:flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>팔로워: {followerCount.toLocaleString()}</span>
-                        </div>
+                        {board.total_view_count !== undefined && (
+                          <div className="hidden sm:flex items-center gap-1">
+                            <Eye className="h-4 w-4" />
+                            <span>총 조회수: {board.total_view_count.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {board.follower_count !== undefined && (
+                          <div className="hidden md:flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            <span>팔로워: {board.follower_count.toLocaleString()}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>
@@ -470,12 +490,22 @@ export default function BoardDetailPage() {
           <>
             {filteredPosts.length > 0 ? (
               <div className="space-y-3">
-                {filteredPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/boards/${boardId}/posts/${post.id}`}
-                    className="block group bg-white/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
-                  >
+                {filteredPosts.map((post) => {
+                  const isSecretPost = post.scr_yn && post.user_id !== user?.user_id;
+                  
+                  if (isSecretPost) {
+                    return (
+                      <div
+                        key={post.id}
+                        className="block group bg-white/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-lg opacity-75 cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSelectedPostId(post.id);
+                          setShowPasswordDialog(true);
+                          setPassword('');
+                          setPasswordError('');
+                        }}
+                      >
                     <div className="flex items-start gap-4">
                       {/* 게시글 정보 */}
                       <div className="flex-1 min-w-0">
@@ -483,7 +513,7 @@ export default function BoardDetailPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <h3 className="text-xl font-bold text-slate-800 hover:text-blue-700 transition-colors line-clamp-1 group-hover:underline">
-                                {post.ttl}
+                                {post.scr_yn && post.user_id !== user?.user_id ? '비밀글입니다' : post.ttl}
                               </h3>
                               <div className="flex items-center gap-1">
                                 {post.ntce_yn && (
@@ -500,7 +530,7 @@ export default function BoardDetailPage() {
                                 )}
                               </div>
                             </div>
-                            {post.smmry && (
+                            {post.smmry && !(post.scr_yn && post.user_id !== user?.user_id) && (
                               <p className="text-slate-600 text-base mb-4 line-clamp-2 leading-relaxed">
                                 {post.smmry}
                               </p>
@@ -533,8 +563,76 @@ export default function BoardDetailPage() {
                         </div>
                       </div>
                     </div>
-                  </Link>
-                ))}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={post.id}
+                      href={`/boards/${boardId}/posts/${post.id}`}
+                      className="block group bg-white/90 backdrop-blur-sm rounded-lg p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+                    >
+                      <div className="flex items-start gap-4">
+                        {/* 게시글 정보 */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-xl font-bold text-slate-800 hover:text-blue-700 transition-colors line-clamp-1 group-hover:underline">
+                                  {post.ttl}
+                                </h3>
+                                <div className="flex items-center gap-1">
+                                  {post.ntce_yn && (
+                                    <Badge variant="destructive" className="text-xs px-2 py-0.5 flex items-center gap-1">
+                                      <Megaphone className="h-3 w-3" />
+                                      공지
+                                    </Badge>
+                                  )}
+                                  {post.scr_yn && (
+                                    <Badge variant="secondary" className="text-xs px-2 py-0.5 flex items-center gap-1">
+                                      <Lock className="h-3 w-3" />
+                                      비밀
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              {post.smmry && (
+                                <p className="text-slate-600 text-base mb-4 line-clamp-2 leading-relaxed">
+                                  {post.smmry}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 메타 정보 */}
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4" />
+                              <span className="font-medium">익명</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              <span>{new Date(post.crt_dt).toLocaleDateString('ko-KR')}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-4 w-4" />
+                              <span>{post.vw_cnt || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Heart className="h-4 w-4" />
+                              <span>{post.lk_cnt || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <MessageSquare className="h-4 w-4" />
+                              <span>{post.cmt_cnt || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-20">
@@ -563,6 +661,77 @@ export default function BoardDetailPage() {
         )}
         </div>
       </div>
+
+      {/* 비밀번호 입력 다이얼로그 */}
+      <Dialog 
+        open={showPasswordDialog} 
+        onOpenChange={(open) => {
+          setShowPasswordDialog(open);
+          if (!open) {
+            setPassword('');
+            setPasswordError('');
+            setSelectedPostId(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              비밀글 비밀번호 입력
+            </DialogTitle>
+            <DialogDescription>
+              이 게시글은 비밀글입니다. 비밀번호를 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">비밀번호</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="비밀번호를 입력하세요"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !verifyingPassword && password.trim()) {
+                    handlePasswordSubmit();
+                  }
+                }}
+                disabled={verifyingPassword}
+                className={passwordError ? 'border-red-500' : ''}
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPasswordDialog(false);
+                setPassword('');
+                setPasswordError('');
+                setSelectedPostId(null);
+              }}
+              disabled={verifyingPassword}
+            >
+              취소
+            </Button>
+            <Button
+              onClick={handlePasswordSubmit}
+              disabled={verifyingPassword || !password.trim()}
+            >
+              {verifyingPassword ? '확인 중...' : '확인'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

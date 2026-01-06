@@ -165,3 +165,65 @@ def verify_token_hash(token: str, token_hash: str) -> bool:
         logger.error(f"토큰 해시 검증 중 오류 발생: {type(e).__name__}: {str(e)}")
         return False
 
+
+def create_secret_post_access_token(post_id: int, user_id: str, expires_delta: Optional[timedelta] = None) -> str:
+    """비밀글 접근용 임시 토큰 생성
+    
+    비밀번호 검증 성공 후 비밀글에 접근하기 위한 임시 토큰을 생성합니다.
+    기본 만료 시간은 1시간입니다.
+    
+    Args:
+        post_id: 게시글 ID
+        user_id: 사용자 ID
+        expires_delta: 만료 시간 (기본값: 1시간)
+        
+    Returns:
+        JWT 토큰 문자열
+    """
+    to_encode = {
+        "post_id": post_id,
+        "user_id": user_id,
+        "type": "secret_post_access"
+    }
+    
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        # 기본 1시간 유효
+        expire = datetime.utcnow() + timedelta(hours=1)
+    
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(
+        to_encode, settings.secret_key, algorithm=settings.algorithm
+    )
+    return encoded_jwt
+
+
+def verify_secret_post_access_token(token: str, post_id: int, user_id: str) -> bool:
+    """비밀글 접근 토큰 검증
+    
+    Args:
+        token: 검증할 토큰
+        post_id: 게시글 ID
+        user_id: 사용자 ID
+        
+    Returns:
+        검증 성공 여부
+    """
+    try:
+        payload = decode_token(token)
+        if not payload:
+            return False
+        
+        # 토큰 타입 확인
+        if payload.get("type") != "secret_post_access":
+            return False
+        
+        # 게시글 ID와 사용자 ID 확인
+        if payload.get("post_id") != post_id or payload.get("user_id") != user_id:
+            return False
+        
+        return True
+    except Exception as e:
+        logger.error(f"비밀글 접근 토큰 검증 중 오류 발생: {type(e).__name__}: {str(e)}")
+        return False
