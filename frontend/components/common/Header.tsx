@@ -13,9 +13,17 @@ import { Button } from '@/components/ui/button';
 import { logoutApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/useToast';
 import { isAdmin } from '@/utils/roles';
-import { ChevronDown, MessageSquare, TrendingUp, Heart, Star, Plus } from 'lucide-react';
+import { ChevronDown, MessageSquare, TrendingUp, Heart, Star, Plus, User, LogOut, LayoutDashboard } from 'lucide-react';
 import { boardApi } from '@/lib/api/boards';
 import { Board } from '@/types/board';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function Header() {
   const router = useRouter();
@@ -191,12 +199,6 @@ export function Header() {
 
           {/* 가운데: 메뉴 */}
           <nav className="hidden lg:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
-            <Link
-              href="/"
-              className="px-4 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted/50 rounded-md"
-            >
-              홈
-            </Link>
             {isAuthenticated ? (
               <>
                 <div
@@ -211,18 +213,6 @@ export function Header() {
                   </button>
                 </div>
                 <Link
-                  href="/profile"
-                  className="px-4 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted/50 rounded-md"
-                >
-                  프로필
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="px-4 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted/50 rounded-md"
-                >
-                  대시보드
-                </Link>
-                <Link
                   href="/services"
                   className="px-4 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted/50 rounded-md"
                 >
@@ -236,12 +226,6 @@ export function Header() {
                     관리자
                   </Link>
                 )}
-                <Link
-                  href="/settings"
-                  className="px-4 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground hover:bg-muted/50 rounded-md"
-                >
-                  설정
-                </Link>
               </>
             ) : (
               <>
@@ -277,14 +261,51 @@ export function Header() {
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <>
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                  <span className="text-sm font-medium text-foreground">
-                    {user?.nickname || user?.username}
-                  </span>
-                </div>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  로그아웃
-                </Button>
+                {/* 프로필 드롭다운 메뉴 */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                      {(() => {
+                        const getInitials = () => {
+                          if (user?.nickname) return user.nickname.charAt(0).toUpperCase();
+                          if (user?.nm) return user.nm.charAt(0).toUpperCase();
+                          return user?.username?.charAt(0).toUpperCase() || 'U';
+                        };
+                        return getInitials();
+                      })()}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-white">
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {user?.nickname || user?.username}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {user?.eml}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard" className="cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>마이페이지</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>프로필</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>로그아웃</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <>
