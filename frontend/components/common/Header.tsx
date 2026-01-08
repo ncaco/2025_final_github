@@ -288,7 +288,7 @@ export function Header() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/dashboard" className="cursor-pointer">
+                      <Link href="/mypage" className="cursor-pointer">
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         <span>마이페이지</span>
                       </Link>

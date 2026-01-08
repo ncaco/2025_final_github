@@ -53,10 +53,10 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/dashboard"
+                  href="/mypage"
                   className="text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  대시보드
+                  마이페이지
                 </Link>
               </li>
               <li>

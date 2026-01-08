@@ -1,0 +1,338 @@
+/**
+ * 사용자 대시보드 사이드바 컴포넌트
+ */
+
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils/cn';
+import { LayoutDashboard, FileText, MessageSquare, Bookmark, UserPlus, Flag, HelpCircle, ChevronRight } from 'lucide-react';
+
+interface NavItem {
+  title: string;
+  href?: string;
+  icon?: React.ReactNode;
+  children?: NavItem[];
+}
+
+const navItems: NavItem[] = [
+  {
+    title: '대시보드',
+    href: '/mypage',
+    icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    title: '내 활동',
+    children: [
+      {
+        title: '내 게시글',
+        href: '/mypage/my-posts',
+        icon: <FileText className="h-4 w-4" />,
+      },
+      {
+        title: '내 댓글',
+        href: '/mypage/my-comments',
+        icon: <MessageSquare className="h-4 w-4" />,
+      },
+      {
+        title: '내 북마크',
+        href: '/mypage/my-bookmarks',
+        icon: <Bookmark className="h-4 w-4" />,
+      },
+      {
+        title: '내 팔로우',
+        href: '/mypage/my-follows',
+        icon: <UserPlus className="h-4 w-4" />,
+      },
+    ],
+  },
+  {
+    title: '신고 및 문의',
+    children: [
+      {
+        title: '내 신고',
+        href: '/mypage/my-reports',
+        icon: <Flag className="h-4 w-4" />,
+      },
+      {
+        title: '문의 내역',
+        href: '/mypage/inquiries',
+        icon: <HelpCircle className="h-4 w-4" />,
+      },
+    ],
+  },
+];
+
+interface DashboardSidebarProps {
+  isOpen: boolean;
+  onClose?: () => void;
+  onToggle?: () => void;
+}
+
+export function DashboardSidebar({ isOpen, onClose, onToggle }: DashboardSidebarProps) {
+  const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set(['내 활동']));
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // 화면 크기 변경에 따른 사이드바 상태 조정
+  useEffect(() => {
+    if (typeof window === 'undefined' || !onToggle) return;
+
+    const handleResize = () => {
+      const newIsMobile = window.innerWidth < 1024;
+
+      if (isMobile && !newIsMobile && !isOpen) {
+        // 모바일에서 데스크탑으로 전환 + 사이드바 닫혀있으면 열기
+        onToggle();
+      } else if (!isMobile && newIsMobile && isOpen) {
+        // 데스크탑에서 모바일로 전환 + 사이드바 열려있으면 닫기
+        onClose && onClose();
+      }
+      setIsMobile(newIsMobile);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobile, isOpen, onClose, onToggle]);
+
+  const toggleMenu = (menuTitle: string) => {
+    setExpandedMenus(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(menuTitle)) {
+        newSet.delete(menuTitle);
+      } else {
+        newSet.add(menuTitle);
+      }
+      return newSet;
+    });
+  };
+
+  const isActive = (href: string) => {
+    if (!pathname) return false;
+
+    // 정확히 일치하는 경우
+    if (pathname === href) return true;
+
+    // /mypage는 정확히 일치할 때만 active
+    if (href === '/mypage') {
+      return pathname === '/mypage';
+    }
+
+    // 다른 메뉴는 해당 경로로 시작할 때 active
+    return pathname.startsWith(href + '/') || pathname === href;
+  };
+
+  const isMenuActive = (item: NavItem): boolean => {
+    if (item.href && isActive(item.href)) return true;
+    if (item.children) {
+      return item.children.some(child => child.href && isActive(child.href));
+    }
+    return false;
+  };
+
+  // ESC 키로 메뉴 닫기 (모바일만)
+  useEffect(() => {
+    if (!isOpen || !onClose) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      // 모바일 화면에서만 동작
+      if (window.innerWidth < 1024 && e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  return (
+    <>
+      {/* 모바일 오버레이 (바탕 클릭 시 닫기) */}
+      {isOpen && isMobile && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={cn(
+          // Base styles: fixed, z-index, white background, no shadow
+          'fixed left-0 z-49 bg-white shadow-none',
+
+          // Mobile specific positioning (when open/closed)
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          'w-full', // Occupy full width on mobile
+
+          // Desktop specific overrides (lg breakpoint and up)
+          'lg:static lg:block lg:min-h-screen', // Override fixed for desktop
+          {
+            'lg:w-48 lg:border-r': isOpen, // Desktop: open width and border
+            'lg:w-0 lg:border-0': !isOpen, // Desktop: closed width and no border
+          }
+        )}
+        style={{
+          top: isMobile ? '64px' : '0px',
+          bottom: isMobile ? '64px' : '0px',
+        }}
+      >
+        <div className={cn('p-2', isOpen ? 'opacity-100' : 'opacity-0', isMobile ? 'transition-none' : 'transition-opacity duration-300')}>
+          <nav className="space-y-0.5">
+            {navItems.map((item) => {
+              const isExpanded = expandedMenus.has(item.title);
+              const menuActive = isMenuActive(item);
+
+              if (item.children) {
+                // 상위 메뉴 (하위 메뉴가 있는 경우)
+                return (
+                  <div key={item.title}>
+                    <button
+                      onClick={() => toggleMenu(item.title)}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap w-full text-left',
+                        menuActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                      )}
+                    >
+                      <ChevronRight
+                        className={cn(
+                          'h-4 w-4 transition-transform duration-200',
+                          isExpanded ? 'rotate-90' : ''
+                        )}
+                      />
+                      <span>{item.title}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-4 mt-1 space-y-0.5 bg-white/100 rounded-md p-1">
+                        {item.children.map((child) => {
+                          const active = child.href && isActive(child.href);
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href || '#'}
+                              className={cn(
+                                'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                                active
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                              )}
+                            >
+                              {child.icon}
+                              <span>{child.title}</span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              } else {
+                // 일반 메뉴
+                const active = item.href && isActive(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href || '#'}
+                    className={cn(
+                      'flex items-center gap-2 px-2 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap',
+                      active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </Link>
+                );
+              }
+            })}
+          </nav>
+        </div>
+        
+        {/* 사이드바 여닫기 버튼 (세로 가운데) */}
+        {onToggle && !isMobile && (
+          <div
+            className="absolute z-50 transition-all duration-300 ease-in-out"
+            style={{
+              left: isOpen ? '192px' : '0px',
+              top: '50%',
+              transform: 'translateY(-50%) translateX(-50%)'
+            }}
+          >
+            {/* 구분선 */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-20 bg-gradient-to-b from-transparent via-border/60 to-transparent" />
+            
+            {/* 테두리용 외부 div */}
+            <div
+              className="relative border border-border/40 bg-white transition-all duration-300 hover:border-primary/50 rounded-full flex items-center justify-center shadow-none"
+              style={{
+                width: '32px',
+                height: '32px',
+              }}
+            >
+              {/* 내부 버튼 */}
+              <button
+                onClick={onToggle}
+                className={cn(
+                  "w-full h-full bg-white transition-all duration-300 rounded-full",
+                  "hover:bg-primary/5",
+                  "active:scale-[0.98] cursor-pointer",
+                  "flex items-center justify-center",
+                  "group",
+                  "shadow-none"
+                )}
+                title={isOpen ? '사이드바 닫기' : '사이드바 열기'}
+              >
+                <div className="relative z-10 transition-all duration-300 group-hover:scale-110">
+                  {isOpen ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-foreground/50 group-hover:text-primary transition-colors"
+                    >
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="text-foreground/50 group-hover:text-primary transition-colors"
+                    >
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  )}
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+    </>
+  );
+}
