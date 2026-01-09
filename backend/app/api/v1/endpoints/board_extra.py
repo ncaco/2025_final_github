@@ -9,7 +9,7 @@ from app.models.board import (
     FollowType, BbsPost, BbsComment, BbsBoard, BbsCategory, PostStatus,
     BbsPostView, BbsPostLike, BbsCommentLike, CommentStatus
 )
-from sqlalchemy import func
+from sqlalchemy import func, String
 from app.models.user import CommonUser
 from app.dependencies import get_current_active_user, is_admin_user
 from app.schemas.board import (
@@ -651,6 +651,152 @@ async def get_user_comments(
             'board_id': board_id
         }
         result.append(comment_dict)
+
+    return result
+
+
+# 사용자 좋아요한 게시글 조회
+@router.get(
+    "/user/likes",
+    summary="사용자 좋아요한 게시글 조회",
+    description="현재 사용자가 좋아요한 게시글들을 조회합니다."
+)
+async def get_user_likes(
+    user_id: Optional[str] = Query(None, description="조회할 사용자 ID (기본값: 현재 사용자)"),
+    skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
+    limit: int = Query(20, ge=1, le=100, description="반환할 최대 레코드 수"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """사용자 좋아요한 게시글 조회"""
+    from app.schemas.board import PostResponse
+
+    target_user_id = user_id or current_user.user_id
+
+    # 사용자 존재 확인
+    user = db.query(CommonUser).filter(
+        CommonUser.user_id == target_user_id,
+        CommonUser.del_yn == False
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다"
+        )
+
+    likes = db.query(
+        BbsPost,
+        BbsCategory.nm.label('category_nm'),
+        BbsBoard.nm.label('board_nm'),
+        BbsPostLike.crt_dt.label('liked_at')
+    ).join(
+        BbsPostLike, BbsPost.id == BbsPostLike.post_id
+    ).outerjoin(
+        BbsCategory, BbsPost.category_id == BbsCategory.id
+    ).join(
+        BbsBoard, BbsPost.board_id == BbsBoard.id
+    ).filter(
+        BbsPostLike.user_id == target_user_id,
+        BbsPost.stts != PostStatus.DELETED
+    ).order_by(BbsPostLike.crt_dt.desc()).offset(skip).limit(limit).all()
+
+    result = []
+    for post, category_nm, board_nm, liked_at in likes:
+        post_dict = PostResponse.from_orm(post).dict()
+        
+        # 조회수: bbs_post_views 테이블에서 실제 카운트
+        view_count = db.query(func.count(BbsPostView.id)).filter(
+            BbsPostView.post_id == post.id
+        ).scalar() or 0
+        post_dict['vw_cnt'] = int(view_count)
+        
+        # 댓글수: bbs_comments 테이블에서 실제 카운트 (삭제되지 않은 댓글만)
+        comment_count = db.query(func.count(BbsComment.id)).filter(
+            BbsComment.post_id == post.id,
+            BbsComment.stts != CommentStatus.DELETED
+        ).scalar() or 0
+        post_dict['cmt_cnt'] = int(comment_count)
+        
+        # 좋아요수: bbs_post_likes 테이블에서 실제 카운트
+        like_count = db.query(func.count(BbsPostLike.id)).filter(
+            BbsPostLike.post_id == post.id
+        ).scalar() or 0
+        post_dict['lk_cnt'] = int(like_count)
+        
+        post_dict.update({
+            'category_nm': category_nm,
+            'board_nm': board_nm,
+            'liked_at': liked_at
+        })
+        result.append(post_dict)
+
+    return result
+
+
+# 사용자 팔로우한 게시판 조회
+@router.get(
+    "/user/followed-boards",
+    summary="사용자 팔로우한 게시판 조회",
+    description="현재 사용자가 팔로우한 게시판들을 조회합니다."
+)
+async def get_user_followed_boards(
+    user_id: Optional[str] = Query(None, description="조회할 사용자 ID (기본값: 현재 사용자)"),
+    skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
+    limit: int = Query(20, ge=1, le=100, description="반환할 최대 레코드 수"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """사용자 팔로우한 게시판 조회"""
+    from app.schemas.board import BoardResponse
+
+    target_user_id = user_id or current_user.user_id
+
+    # 사용자 존재 확인
+    user = db.query(CommonUser).filter(
+        CommonUser.user_id == target_user_id,
+        CommonUser.del_yn == False
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다"
+        )
+
+    followed_boards = db.query(
+        BbsBoard,
+        BbsFollow.crt_dt.label('followed_at')
+    ).join(
+        BbsFollow, func.cast(BbsBoard.id, String) == BbsFollow.following_id
+    ).filter(
+        BbsFollow.follower_id == target_user_id,
+        BbsFollow.typ == FollowType.BOARD,
+        BbsBoard.actv_yn == True,
+        BbsBoard.del_yn == False
+    ).order_by(BbsFollow.crt_dt.desc()).offset(skip).limit(limit).all()
+
+    result = []
+    for board, followed_at in followed_boards:
+        # 게시판 통계 계산
+        post_count = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.stts == PostStatus.PUBLISHED,
+            BbsPost.stts != PostStatus.DELETED
+        ).scalar() or 0
+
+        follower_count = db.query(func.count(BbsFollow.id)).filter(
+            BbsFollow.following_id == str(board.id),
+            BbsFollow.typ == FollowType.BOARD
+        ).scalar() or 0
+
+        board_dict = BoardResponse.model_validate(board, from_attributes=True).model_dump()
+        board_dict.update({
+            'post_count': int(post_count),
+            'follower_count': int(follower_count),
+            'followed_at': followed_at
+        })
+        result.append(board_dict)
 
     return result
 

@@ -221,4 +221,22 @@ export const userContentApi = {
     const queryParams = userId ? { user_id: userId, ...params } : params;
     return get<any[]>('/api/v1/board-extra/user/comments', { params: queryParams });
   },
+
+  // 사용자 좋아요한 게시글
+  getUserLikes: (userId?: string, params?: {
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = userId ? { user_id: userId, ...params } : params;
+    return get<any[]>('/api/v1/board-extra/user/likes', { params: queryParams });
+  },
+
+  // 사용자 팔로우한 게시판
+  getUserFollowedBoards: (userId?: string, params?: {
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = userId ? { user_id: userId, ...params } : params;
+    return get<any[]>('/api/v1/board-extra/user/followed-boards', { params: queryParams });
+  },
 };

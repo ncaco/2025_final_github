@@ -164,8 +164,8 @@ export function MyPageSidebar({ isOpen, onClose }: MyPageSidebarProps) {
         // 모바일: 콜랩스 애니메이션 (콘텐츠 영역에 포함)
         'lg:hidden',
         isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0 overflow-hidden',
-        // 데스크탑: 항상 표시 (왼쪽 사이드바)
-        'lg:block lg:sticky lg:top-0 lg:self-start lg:h-screen lg:overflow-y-auto lg:w-64 lg:max-h-none lg:opacity-100',
+        // 데스크탑: 항상 표시 (왼쪽 사이드바, 오른쪽과 동일한 구조)
+        'lg:block lg:w-64 lg:shrink-0 lg:h-screen lg:max-h-none lg:opacity-100',
         'transition-all duration-300 ease-in-out',
         'z-30 lg:z-auto'
       )}
@@ -174,8 +174,11 @@ export function MyPageSidebar({ isOpen, onClose }: MyPageSidebarProps) {
         e.stopPropagation();
       }}
     >
-        <div className="h-full">
-          <nav className="p-4 space-y-1">
+      {/* 데스크탑에서 sticky 컨테이너 - 오른쪽 사이드바와 동일한 구조 */}
+      <div className={cn(
+        'lg:sticky lg:top-0 lg:p-4'
+      )}>
+        <nav className="p-4 lg:p-0 space-y-1">
             {navItems.map((item) => {
               const isExpanded = expandedMenus.has(item.title);
               const menuActive = isMenuActive(item);
@@ -259,7 +262,7 @@ export function MyPageSidebar({ isOpen, onClose }: MyPageSidebarProps) {
               }
             })}
           </nav>
-        </div>
-      </aside>
+      </div>
+    </aside>
   );
 }

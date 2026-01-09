@@ -23,7 +23,7 @@ export function MyPageProfileSidebar() {
   };
 
   return (
-    <aside className="hidden xl:block w-80 shrink-0 border-l border-border bg-white">
+    <aside className="hidden xl:block w-80 shrink-0 h-screen border-l border-border bg-white">
       <div className="sticky top-0 p-6 space-y-6">
         {/* 프로필 카드 */}
         <Card className="border-0 shadow-lg">

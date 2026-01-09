@@ -90,8 +90,8 @@ export default function MyPageLayout({
       </div>
 
       {/* 사이드바와 메인 콘텐츠 */}
-      <div className="flex flex-1 min-h-0 relative">
-        {/* 왼쪽 사이드바 - 데스크탑에서만 표시 */}
+      <div className="flex flex-1 min-h-0">
+        {/* 왼쪽 사이드바 - 데스크탑에서만 표시, 오른쪽과 동일한 구조 */}
         <div className="hidden lg:block">
           <MyPageSidebar isOpen={true} />
         </div>
