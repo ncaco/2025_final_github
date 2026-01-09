@@ -212,4 +212,13 @@ export const userContentApi = {
     const queryParams = userId ? { user_id: userId, ...params } : params;
     return get<any[]>('/api/v1/board-extra/user/posts', { params: queryParams });
   },
+
+  // 사용자 작성 댓글
+  getUserComments: (userId?: string, params?: {
+    skip?: number;
+    limit?: number;
+  }) => {
+    const queryParams = userId ? { user_id: userId, ...params } : params;
+    return get<any[]>('/api/v1/board-extra/user/comments', { params: queryParams });
+  },
 };

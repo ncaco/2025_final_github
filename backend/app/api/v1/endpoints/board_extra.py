@@ -7,7 +7,7 @@ from app.models.board import (
     BbsReport, BbsNotification, BbsFollow, BbsUserPreference,
     BbsTag, BbsPostTag, ReportTargetType, ReportStatus,
     FollowType, BbsPost, BbsComment, BbsBoard, BbsCategory, PostStatus,
-    BbsPostView, BbsPostLike, CommentStatus
+    BbsPostView, BbsPostLike, BbsCommentLike, CommentStatus
 )
 from sqlalchemy import func
 from app.models.user import CommonUser
@@ -575,6 +575,82 @@ async def get_user_bookmarks(
             'bookmarked_at': bookmarked_at
         })
         result.append(post_dict)
+
+    return result
+
+
+# 사용자 작성 댓글 조회
+@router.get(
+    "/user/comments",
+    summary="사용자 작성 댓글 조회",
+    description="특정 사용자가 작성한 댓글들을 조회합니다."
+)
+async def get_user_comments(
+    user_id: Optional[str] = Query(None, description="조회할 사용자 ID (기본값: 현재 사용자)"),
+    skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
+    limit: int = Query(20, ge=1, le=100, description="반환할 최대 레코드 수"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """사용자 작성 댓글 조회"""
+    from app.schemas.board import CommentResponse
+
+    target_user_id = user_id or current_user.user_id
+
+    # 사용자 존재 확인
+    user = db.query(CommonUser).filter(
+        CommonUser.user_id == target_user_id,
+        CommonUser.del_yn == False
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다"
+        )
+
+    query = db.query(
+        BbsComment,
+        BbsPost.ttl.label('post_title'),
+        BbsPost.id.label('post_id'),
+        BbsBoard.nm.label('board_nm'),
+        BbsBoard.id.label('board_id')
+    ).join(
+        BbsPost, BbsComment.post_id == BbsPost.id
+    ).join(
+        BbsBoard, BbsPost.board_id == BbsBoard.id
+    ).filter(
+        BbsComment.user_id == target_user_id,
+        BbsComment.stts != CommentStatus.DELETED
+    )
+
+    comments = query.order_by(BbsComment.crt_dt.desc()).offset(skip).limit(limit).all()
+
+    result = []
+    for comment, post_title, post_id, board_nm, board_id in comments:
+        # 좋아요 수: bbs_comment_likes 테이블에서 실제 카운트
+        like_count = db.query(func.count()).filter(
+            BbsCommentLike.comment_id == comment.id
+        ).scalar() or 0
+        
+        comment_dict = {
+            'id': comment.id,
+            'post_id': post_id,
+            'user_id': comment.user_id,
+            'cn': comment.cn,
+            'parent_id': comment.parent_id,
+            'scr_yn': comment.scr_yn,
+            'stts': comment.stts,
+            'lk_cnt': int(like_count),
+            'depth': comment.depth,
+            'sort_order': comment.sort_order,
+            'crt_dt': comment.crt_dt,
+            'upd_dt': comment.upd_dt,
+            'post_title': post_title,
+            'board_nm': board_nm,
+            'board_id': board_id
+        }
+        result.append(comment_dict)
 
     return result
 
