@@ -6,8 +6,10 @@ from app.database import get_db
 from app.models.board import (
     BbsReport, BbsNotification, BbsFollow, BbsUserPreference,
     BbsTag, BbsPostTag, ReportTargetType, ReportStatus,
-    FollowType, BbsPost, BbsComment, BbsBoard
+    FollowType, BbsPost, BbsComment, BbsBoard, BbsCategory, PostStatus,
+    BbsPostView, BbsPostLike, CommentStatus
 )
+from sqlalchemy import func
 from app.models.user import CommonUser
 from app.dependencies import get_current_active_user, is_admin_user
 from app.schemas.board import (
@@ -36,7 +38,7 @@ async def create_report(
     if report.target_type == ReportTargetType.POST:
         target = db.query(BbsPost).filter(
             BbsPost.id == report.target_id,
-            BbsPost.del_yn == False
+            BbsPost.stts != PostStatus.DELETED
         ).first()
         if not target:
             raise HTTPException(
@@ -425,7 +427,7 @@ async def get_post_tags(
     # 게시글 존재 확인
     post = db.query(BbsPost).filter(
         BbsPost.id == post_id,
-        BbsPost.del_yn == False
+        BbsPost.stts != PostStatus.DELETED
     ).first()
 
     if not post:
@@ -560,8 +562,8 @@ async def get_user_bookmarks(
         BbsCategory, BbsPost.category_id == BbsCategory.id
     ).filter(
         BbsBookmark.user_id == current_user.user_id,
-        BbsPost.del_yn == False,
-        BbsPost.stts == "PUBLISHED"
+        BbsPost.stts != PostStatus.DELETED,
+        BbsPost.stts == PostStatus.PUBLISHED
     ).order_by(BbsBookmark.crt_dt.desc()).offset(skip).limit(limit).all()
 
     result = []
@@ -618,7 +620,7 @@ async def get_user_posts(
         BbsBoard, BbsPost.board_id == BbsBoard.id
     ).filter(
         BbsPost.user_id == target_user_id,
-        BbsPost.del_yn == False
+        BbsPost.stts != PostStatus.DELETED
     )
 
     if status:
@@ -629,6 +631,26 @@ async def get_user_posts(
     result = []
     for post, category_nm, board_nm in posts:
         post_dict = PostResponse.from_orm(post).dict()
+        
+        # 조회수: bbs_post_views 테이블에서 실제 카운트
+        view_count = db.query(func.count(BbsPostView.id)).filter(
+            BbsPostView.post_id == post.id
+        ).scalar() or 0
+        post_dict['vw_cnt'] = int(view_count)
+        
+        # 댓글수: bbs_comments 테이블에서 실제 카운트 (삭제되지 않은 댓글만)
+        comment_count = db.query(func.count(BbsComment.id)).filter(
+            BbsComment.post_id == post.id,
+            BbsComment.stts != CommentStatus.DELETED
+        ).scalar() or 0
+        post_dict['cmt_cnt'] = int(comment_count)
+        
+        # 좋아요수: bbs_post_likes 테이블에서 실제 카운트
+        like_count = db.query(func.count(BbsPostLike.id)).filter(
+            BbsPostLike.post_id == post.id
+        ).scalar() or 0
+        post_dict['lk_cnt'] = int(like_count)
+        
         post_dict.update({
             'category_nm': category_nm,
             'board_nm': board_nm
