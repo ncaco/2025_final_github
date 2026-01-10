@@ -40,17 +40,17 @@ import { BoardCreate, BoardType, PermissionLevel } from '@/types/board';
 const boardCreateSchema = z.object({
   nm: z.string().min(1, '게시판명을 입력해주세요').max(100, '게시판명은 100자 이내로 입력해주세요'),
   dsc: z.string().optional(),
-  typ: z.enum(['GENERAL', 'NOTICE', 'QNA', 'IMAGE', 'VIDEO']).default('GENERAL'),
-  read_permission: z.enum(['ALL', 'USER', 'ADMIN']).default('ALL'),
-  write_permission: z.enum(['ALL', 'USER', 'ADMIN']).default('USER'),
-  comment_permission: z.enum(['ALL', 'USER', 'ADMIN']).default('USER'),
-  allow_attachment: z.boolean().default(true),
-  allow_image: z.boolean().default(true),
-  max_file_size: z.number().min(1).max(100).default(10),
-  sort_order: z.number().min(0).default(0),
+  typ: z.enum(['GENERAL', 'NOTICE', 'QNA', 'IMAGE', 'VIDEO']).optional().default('GENERAL'),
+  read_permission: z.enum(['ALL', 'USER', 'ADMIN']).optional().default('ALL'),
+  write_permission: z.enum(['ALL', 'USER', 'ADMIN']).optional().default('USER'),
+  comment_permission: z.enum(['ALL', 'USER', 'ADMIN']).optional().default('USER'),
+  allow_attachment: z.boolean().optional().default(true),
+  allow_image: z.boolean().optional().default(true),
+  max_file_size: z.number().min(1).max(100).optional().default(10),
+  sort_order: z.number().min(0).optional().default(0),
 });
 
-type BoardCreateForm = z.infer<typeof boardCreateSchema>;
+type BoardCreateForm = BoardCreate;
 
 interface BoardCreateModalProps {
   open: boolean;

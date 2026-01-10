@@ -18,6 +18,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -73,7 +74,7 @@ export function PostUpdateModal({ post, open, onClose, onSubmit }: PostUpdateMod
       category_id: post.category_id,
       ntce_yn: post.ntce_yn,
       scr_yn: post.scr_yn,
-      stts: post.stts,
+      stts: post.stts === 'DELETED' ? undefined : post.stts,
       tags: post.tags || [],
       change_rsn: '',
     },
@@ -89,7 +90,7 @@ export function PostUpdateModal({ post, open, onClose, onSubmit }: PostUpdateMod
         category_id: post.category_id,
         ntce_yn: post.ntce_yn,
         scr_yn: post.scr_yn,
-        stts: post.stts,
+        stts: post.stts === 'DELETED' ? undefined : post.stts,
         tags: post.tags || [],
         change_rsn: '',
       });

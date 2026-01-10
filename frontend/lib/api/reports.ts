@@ -1,7 +1,7 @@
 /**
  * 신고 및 관리 기능 API
  */
-import { get, post, put } from './client';
+import { get, post, put, del } from './client';
 
 // 신고 관련 타입들
 export interface Report {

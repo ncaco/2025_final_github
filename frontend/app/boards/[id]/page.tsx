@@ -13,7 +13,7 @@ import { boardApi } from '@/lib/api/boards';
 import { postApi } from '@/lib/api/posts';
 import { get, post, del } from '@/lib/api/client';
 import { Board, BoardType, PermissionLevel } from '@/types/board';
-import { Post } from '@/types/post';
+import { Post } from '@/types/board';
 import { useToast } from '@/hooks/useToast';
 import { Loading } from '@/components/common/Loading';
 import { Search, Plus, MessageSquare, Eye, Heart, User, Calendar, ArrowLeft, Megaphone, Lock, FileText, HelpCircle, ImageIcon, Video, Users } from 'lucide-react';

@@ -3,7 +3,17 @@
  * 토큰 관리, 인터셉터, 에러 처리 등을 포함합니다.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// 동적으로 API_BASE_URL 설정 (프로덕션에서는 현재 도메인 사용)
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // 브라우저 환경에서 현재 도메인 사용 (ngrok 등)
+    return window.location.origin;
+  }
+  // 서버 사이드에서는 환경변수 사용
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiError {
   detail?: string | { [key: string]: any };

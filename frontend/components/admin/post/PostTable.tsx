@@ -89,7 +89,7 @@ export function PostTable({
   };
 
   const getStatusLabel = (status: string) => {
-    const labels = {
+    const labels: Record<string, string> = {
       PUBLISHED: '게시됨',
       DRAFT: '임시저장',
       DELETED: '삭제됨',
@@ -99,14 +99,14 @@ export function PostTable({
     return labels[status] || status;
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
+  const getStatusColor = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    const colors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       PUBLISHED: 'default',
       DRAFT: 'secondary',
       DELETED: 'destructive',
       HIDDEN: 'outline',
       SECRET: 'outline',
-    } as const;
+    };
     return colors[status] || 'default';
   };
 
@@ -126,8 +126,7 @@ export function PostTable({
             <TableRow>
               <TableHead className="w-[50px]">
                 <Checkbox
-                  checked={allSelected}
-                  indeterminate={someSelected}
+                  checked={allSelected || someSelected}
                   onCheckedChange={onSelectAll}
                 />
               </TableHead>
@@ -309,9 +308,11 @@ export function PostTable({
       {/* 삭제 확인 다이얼로그 */}
       <ConfirmDialog
         open={deleteConfirmOpen}
-        onClose={() => {
-          setDeleteConfirmOpen(false);
-          setPostToDelete(null);
+        onOpenChange={(open) => {
+          setDeleteConfirmOpen(open);
+          if (!open) {
+            setPostToDelete(null);
+          }
         }}
         onConfirm={() => {
           if (postToDelete) {

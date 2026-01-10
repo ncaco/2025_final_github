@@ -1,0 +1,28 @@
+# 환경 변수 파일
+.env
+.env.local
+.env.production
+server/.env.production
+server/env.production.example
+backend/env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+*.dockerignore
+
+# 서버 관련
+server/.env.production

@@ -61,3 +61,5 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
+env.local
+env.production

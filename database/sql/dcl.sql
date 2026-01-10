@@ -23,7 +23,7 @@
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'app_user') THEN
-        CREATE USER app_user WITH PASSWORD 'app_password_123!@#';
+        CREATE USER app_user WITH PASSWORD 'app_password_123';
     END IF;
 END
 $$;
@@ -56,7 +56,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'readonly_user') THEN
-        CREATE USER readonly_user WITH PASSWORD 'readonly_password_123!@#';
+        CREATE USER readonly_user WITH PASSWORD 'readonly_password_123';
     END IF;
 END
 $$;
@@ -84,7 +84,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'backup_user') THEN
-        CREATE USER backup_user WITH PASSWORD 'backup_password_123!@#';
+        CREATE USER backup_user WITH PASSWORD 'backup_password_123';
     END IF;
 END
 $$;
@@ -112,7 +112,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'dev_user') THEN
-        CREATE USER dev_user WITH PASSWORD 'dev_password_123!@#';
+        CREATE USER dev_user WITH PASSWORD 'dev_password_123';
     END IF;
 END
 $$;
@@ -158,10 +158,10 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 -- 6. 사용자 비밀번호 변경 (필요시)
 -- ============================================
 -- 비밀번호 변경 예시 (실제 사용 시 주석 해제)
--- ALTER USER app_user WITH PASSWORD 'new_password_123!@#';
--- ALTER USER readonly_user WITH PASSWORD 'new_password_123!@#';
--- ALTER USER backup_user WITH PASSWORD 'new_password_123!@#';
--- ALTER USER dev_user WITH PASSWORD 'new_password_123!@#';
+-- ALTER USER app_user WITH PASSWORD 'new_password_123';
+-- ALTER USER readonly_user WITH PASSWORD 'new_password_123';
+-- ALTER USER backup_user WITH PASSWORD 'new_password_123';
+-- ALTER USER dev_user WITH PASSWORD 'new_password_123';
 
 -- ============================================
 -- 7. 사용자 삭제 (필요시)

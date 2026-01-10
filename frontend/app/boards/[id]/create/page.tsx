@@ -70,7 +70,7 @@ export default function CreatePostPage() {
 
       // 카테고리 로드
       try {
-        const categoriesResponse = await categoryApi.getCategoriesByBoard(Number(boardId));
+        const categoriesResponse = await boardApi.getCategoriesByBoard(Number(boardId));
         setCategories(categoriesResponse);
       } catch (error) {
         // 카테고리 로드 실패해도 진행 가능

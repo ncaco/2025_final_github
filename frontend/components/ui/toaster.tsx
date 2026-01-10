@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/hooks/useToast"
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, Circle } from "lucide-react"
 
-const getToastIcon = (variant?: string) => {
+const getToastIcon = (variant?: string | null) => {
   switch (variant) {
     case "success":
       return <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />

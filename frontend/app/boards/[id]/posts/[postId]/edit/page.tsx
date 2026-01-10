@@ -96,7 +96,7 @@ export default function EditPostPage() {
 
       // 카테고리 로드
       try {
-        const categoriesResponse = await categoryApi.getCategoriesByBoard(Number(boardId));
+        const categoriesResponse = await boardApi.getCategoriesByBoard(Number(boardId));
         setCategories(categoriesResponse);
       } catch (error) {
         console.log('카테고리 로드 실패:', error);

@@ -66,7 +66,7 @@ export function BulkActions({ selectedCount, onBulkAction }: BulkActionsProps) {
   };
 
   const getActionLabel = (action: string) => {
-    const labels = {
+    const labels: Record<string, string> = {
       DELETE: '삭제',
       HIDE: '숨기기',
       SHOW: '게시',
@@ -76,7 +76,7 @@ export function BulkActions({ selectedCount, onBulkAction }: BulkActionsProps) {
   };
 
   const getActionDescription = (action: string) => {
-    const descriptions = {
+    const descriptions: Record<string, string> = {
       DELETE: `${selectedCount}개의 게시글을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`,
       HIDE: `${selectedCount}개의 게시글을 숨기시겠습니까?`,
       SHOW: `${selectedCount}개의 게시글을 게시하시겠습니까?`,
@@ -86,7 +86,7 @@ export function BulkActions({ selectedCount, onBulkAction }: BulkActionsProps) {
   };
 
   const getActionIcon = (action: string) => {
-    const icons = {
+    const icons: Record<string, React.ReactElement> = {
       DELETE: <Trash2 className="h-4 w-4" />,
       HIDE: <EyeOff className="h-4 w-4" />,
       SHOW: <Eye className="h-4 w-4" />,
@@ -162,14 +162,13 @@ export function BulkActions({ selectedCount, onBulkAction }: BulkActionsProps) {
       {/* 확인 다이얼로그 */}
       <ConfirmDialog
         open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
+        onOpenChange={setConfirmOpen}
         onConfirm={handleConfirm}
         title={`${getActionLabel(action)} 확인`}
         description={getActionDescription(action)}
         confirmText="실행"
         cancelText="취소"
         variant={action === 'DELETE' ? 'destructive' : 'default'}
-        loading={loading}
       />
     </div>
   );
