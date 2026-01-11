@@ -18,11 +18,15 @@
 server/
 ├── deploy-local.ps1      # 로컬 환경 배포
 ├── deploy-dev.ps1        # 개발 환경 배포
-├── deploy-production.ps1 # 프로덕션 환경 배포
-├── deploy.ps1            # 프로덕션 환경 배포 (기본)
+├── deploy.ps1            # 프로덕션 환경 배포
 ├── start.ps1             # 컨테이너 시작
 ├── stop.ps1              # 컨테이너 중지
-└── logs.ps1              # 로그 확인
+├── logs.ps1              # 로그 확인
+├── setup-certbot.ps1     # SSL 인증서 설정
+├── test-port-forwarding.ps1  # 포트 포워딩 테스트
+├── connect-postgres.ps1  # PostgreSQL 연결
+├── update-duckdns.ps1    # DuckDNS 수동 업데이트
+└── duckdns-auto-update.ps1  # DuckDNS 자동 업데이트
 ```
 
 ## 로컬 환경 빌드
@@ -200,7 +204,7 @@ docker compose --env-file .env.production logs -f
 .\deploy-dev.ps1 -Rebuild  # 재빌드
 ```
 
-### deploy.ps1 / deploy-production.ps1
+### deploy.ps1
 
 **용도**: 프로덕션 환경
 
