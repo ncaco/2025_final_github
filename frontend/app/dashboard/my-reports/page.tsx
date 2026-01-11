@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Flag } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
 
 export default function MyReportsPage() {
   const { toast } = useToast();
@@ -22,8 +23,8 @@ export default function MyReportsPage() {
   const loadReports = async () => {
     try {
       setLoading(true);
-      // TODO: API 호출로 실제 데이터 로드
-      setReports([]);
+      const response = await dashboardApi.getMyReports(1, 20);
+      setReports(response.items);
     } catch (error) {
       console.error('신고 로드 실패:', error);
       toast({

@@ -15,7 +15,7 @@ export interface DashboardStats {
 
 export interface RecentActivity {
   id: number;
-  type: 'POST' | 'COMMENT' | 'BOOKMARK' | 'FOLLOW';
+  type: 'POST' | 'COMMENT' | 'BOOKMARK' | 'FOLLOW' | 'REPORT';
   title: string;
   created_at: string;
 }
@@ -158,7 +158,29 @@ export const dashboardApi = {
   /**
    * 새 문의 생성
    */
-  async createInquiry(data: { title: string; content: string }): Promise<Inquiry> {
+  async createInquiry(data: { title: string; content: string; category?: string }): Promise<Inquiry> {
     return post<Inquiry>('/api/v1/dashboard/inquiries', data);
+  },
+
+  /**
+   * 관리자 대시보드 통계 조회
+   */
+  async getAdminStats(): Promise<{
+    total_posts: number;
+    total_users: number;
+    total_comments: number;
+    pending_reports: number;
+    posts_today: number;
+    comments_today: number;
+    users_today: number;
+  }> {
+    return get('/api/v1/dashboard/admin/stats');
+  },
+
+  /**
+   * 최근 시스템 활동 조회 (관리자용)
+   */
+  async getAdminRecentActivities(limit: number = 20): Promise<RecentActivity[]> {
+    return get<RecentActivity[]>(`/api/v1/dashboard/admin/recent-activities?limit=${limit}`);
   },
 };

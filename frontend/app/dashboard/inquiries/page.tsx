@@ -10,21 +10,27 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { HelpCircle, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import type { Inquiry } from '@/lib/api/dashboard';
 
 export default function InquiriesPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [inquiries, setInquiries] = useState<any[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
 
   useEffect(() => {
     loadInquiries();
   }, []);
 
+  const router = useRouter();
+
   const loadInquiries = async () => {
     try {
       setLoading(true);
-      // TODO: API 호출로 실제 데이터 로드
-      setInquiries([]);
+      const response = await dashboardApi.getInquiries(1, 20);
+      setInquiries(response.items);
     } catch (error) {
       console.error('문의 로드 실패:', error);
       toast({
@@ -59,9 +65,11 @@ export default function InquiriesPage() {
             문의한 내역을 확인하고 답변을 확인하세요.
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          새 문의하기
+        <Button asChild>
+          <Link href="/contact">
+            <Plus className="mr-2 h-4 w-4" />
+            새 문의하기
+          </Link>
         </Button>
       </div>
 

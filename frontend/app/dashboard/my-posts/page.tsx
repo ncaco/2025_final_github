@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
+import Link from 'next/link';
 
 export default function MyPostsPage() {
   const { toast } = useToast();
@@ -21,8 +23,8 @@ export default function MyPostsPage() {
   const loadPosts = async () => {
     try {
       setLoading(true);
-      // TODO: API 호출로 실제 데이터 로드
-      setPosts([]);
+      const response = await dashboardApi.getMyPosts(1, 20);
+      setPosts(response.items);
     } catch (error) {
       console.error('게시글 로드 실패:', error);
       toast({
@@ -60,15 +62,16 @@ export default function MyPostsPage() {
           ) : (
             <div className="space-y-4">
               {posts.map((post) => (
-                <div
+                <Link
                   key={post.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  href={`/boards/${post.board_id}/posts/${post.id}`}
+                  className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <h3 className="font-medium">{post.title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {new Date(post.created_at).toLocaleString('ko-KR')}
+                    {post.board_name} · {new Date(post.created_at).toLocaleString('ko-KR')} · 조회 {post.view_count} · 좋아요 {post.like_count} · 댓글 {post.comment_count}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

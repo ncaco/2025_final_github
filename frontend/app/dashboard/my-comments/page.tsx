@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
+import Link from 'next/link';
 
 export default function MyCommentsPage() {
   const { toast } = useToast();
@@ -21,8 +23,8 @@ export default function MyCommentsPage() {
   const loadComments = async () => {
     try {
       setLoading(true);
-      // TODO: API 호출로 실제 데이터 로드
-      setComments([]);
+      const response = await dashboardApi.getMyComments(1, 20);
+      setComments(response.items);
     } catch (error) {
       console.error('댓글 로드 실패:', error);
       toast({
@@ -60,15 +62,16 @@ export default function MyCommentsPage() {
           ) : (
             <div className="space-y-4">
               {comments.map((comment) => (
-                <div
+                <Link
                   key={comment.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  href={`/boards/${comment.board_id}/posts/${comment.post_id}`}
+                  className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <p className="text-sm">{comment.content}</p>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(comment.created_at).toLocaleString('ko-KR')}
+                    {comment.board_name} · {comment.post_title} · {new Date(comment.created_at).toLocaleString('ko-KR')}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

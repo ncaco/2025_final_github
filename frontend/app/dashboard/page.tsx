@@ -7,26 +7,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, MessageSquare, Bookmark, UserPlus, TrendingUp, Clock } from 'lucide-react';
+import { FileText, MessageSquare, Bookmark, UserPlus, TrendingUp, Clock, Activity, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
 import Link from 'next/link';
-
-interface DashboardStats {
-  total_posts: number;
-  total_comments: number;
-  total_bookmarks: number;
-  total_follows: number;
-  posts_today: number;
-  comments_today: number;
-}
-
-interface RecentActivity {
-  id: number;
-  type: 'POST' | 'COMMENT' | 'BOOKMARK' | 'FOLLOW';
-  title: string;
-  created_at: string;
-}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -43,17 +28,14 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      // 임시 데이터 (실제 구현 시 API 호출로 교체)
-      setStats({
-        total_posts: 0,
-        total_comments: 0,
-        total_bookmarks: 0,
-        total_follows: 0,
-        posts_today: 0,
-        comments_today: 0,
-      });
+      // API 호출로 실제 데이터 로드
+      const [statsData, activitiesData] = await Promise.all([
+        dashboardApi.getStats(),
+        dashboardApi.getRecentActivities()
+      ]);
 
-      setRecentActivities([]);
+      setStats(statsData);
+      setRecentActivities(activitiesData);
 
     } catch (error) {
       console.error('대시보드 데이터 로드 실패:', error);
@@ -169,6 +151,18 @@ export default function DashboardPage() {
               <Link href="/dashboard/my-follows">
                 <UserPlus className="mr-2 h-4 w-4" />
                 내 팔로우
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href="/dashboard/activity-logs">
+                <Activity className="mr-2 h-4 w-4" />
+                활동 로그
+              </Link>
+            </Button>
+            <Button variant="outline" className="w-full justify-start" asChild>
+              <Link href="/dashboard/search-logs">
+                <Search className="mr-2 h-4 w-4" />
+                검색 로그
               </Link>
             </Button>
           </div>

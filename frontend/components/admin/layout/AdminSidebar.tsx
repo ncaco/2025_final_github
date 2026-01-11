@@ -138,6 +138,10 @@ const navItems: NavItem[] = [
     title: '시스템 관리',
     children: [
       {
+        title: '문의 관리',
+        href: '/admin/inquiries',
+      },
+      {
         title: '다국어 관리',
         href: '/admin/locales',
       },

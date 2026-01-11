@@ -17,10 +17,12 @@ import {
   TrendingUp,
   BarChart3,
   Settings,
-  Shield
+  Shield,
+  HelpCircle
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { statisticsApi } from '@/lib/api/reports';
+import { dashboardApi } from '@/lib/api/dashboard';
 
 interface DashboardStats {
   total_posts: number;
@@ -52,54 +54,33 @@ export default function AdminPage() {
     try {
       setLoading(true);
 
-      // 통계 데이터 로드 (실제 API가 준비되면 사용)
-      // const statsData = await statisticsApi.getSystemStats();
-      // setStats(statsData);
+      // 실제 API 호출
+      const [statsData, activitiesData] = await Promise.all([
+        dashboardApi.getAdminStats(),
+        dashboardApi.getAdminRecentActivities(10)
+      ]);
 
-      // 임시 데이터 (실제 구현 시 API 호출로 교체)
       setStats({
-        total_posts: 1247,
-        total_users: 89,
-        total_comments: 3456,
-        pending_reports: 12,
-        posts_today: 23,
-        users_today: 3,
-        comments_today: 67,
+        total_posts: statsData.total_posts,
+        total_users: statsData.total_users,
+        total_comments: statsData.total_comments,
+        pending_reports: statsData.pending_reports,
+        posts_today: statsData.posts_today,
+        users_today: statsData.users_today,
+        comments_today: statsData.comments_today,
       });
 
-      // 최근 활동 데이터 (임시)
-      setRecentActivities([
-        {
-          id: 1,
-          type: 'POST',
-          title: '새로운 게시글이 작성되었습니다',
-          author: '사용자A',
-          created_at: new Date().toISOString(),
-          status: 'PUBLISHED'
-        },
-        {
-          id: 2,
-          type: 'REPORT',
-          title: '신고가 접수되었습니다',
-          author: '관리자',
-          created_at: new Date(Date.now() - 300000).toISOString(),
-          status: 'PENDING'
-        },
-        {
-          id: 3,
-          type: 'COMMENT',
-          title: '댓글이 작성되었습니다',
-          author: '사용자B',
-          created_at: new Date(Date.now() - 600000).toISOString(),
-        },
-        {
-          id: 4,
-          type: 'USER',
-          title: '새로운 사용자가 가입했습니다',
-          author: '시스템',
-          created_at: new Date(Date.now() - 900000).toISOString(),
-        },
-      ]);
+      // 최근 활동 데이터 변환
+      const activities = activitiesData.map((activity) => ({
+        id: activity.id,
+        type: activity.type as 'POST' | 'COMMENT' | 'REPORT' | 'USER',
+        title: activity.title,
+        author: '시스템',
+        created_at: activity.created_at,
+        status: activity.type === 'POST' ? 'PUBLISHED' : undefined
+      }));
+
+      setRecentActivities(activities);
 
     } catch (error) {
       console.error('대시보드 데이터 로드 실패:', error);
@@ -273,6 +254,13 @@ export default function AdminPage() {
                 <Link href="/admin/reports">
                   <AlertTriangle className="mr-2 h-4 w-4" />
                   신고 처리 ({stats?.pending_reports || 0})
+                </Link>
+              </Button>
+
+              <Button variant="outline" className="justify-start" asChild>
+                <Link href="/admin/inquiries">
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  문의 관리
                 </Link>
               </Button>
 

@@ -1,7 +1,105 @@
 /**
  * 문의 페이지
  */
+
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 export default function ContactPage() {
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    category: '',
+    message: '',
+    privacy: false,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isAuthenticated) {
+      toast({
+        title: '로그인 필요',
+        description: '문의를 제출하려면 로그인이 필요합니다.',
+        variant: 'destructive',
+      });
+      router.push('/auth/login');
+      return;
+    }
+
+    if (!formData.privacy) {
+      toast({
+        title: '오류',
+        description: '개인정보처리방침에 동의해주세요.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // 카테고리 매핑
+      const categoryMap: Record<string, string> = {
+        'general': 'GENERAL',
+        'technical': 'TECHNICAL',
+        'bug': 'BUG',
+        'feature': 'FEATURE',
+        'partnership': 'PARTNERSHIP',
+        'other': 'OTHER',
+      };
+
+      await dashboardApi.createInquiry({
+        title: formData.subject || formData.message.substring(0, 50),
+        content: `이름: ${formData.name}\n이메일: ${formData.email}\n문의 유형: ${formData.category}\n\n${formData.message}`,
+        category: categoryMap[formData.category] || 'GENERAL',
+      });
+
+      toast({
+        title: '성공',
+        description: '문의가 성공적으로 제출되었습니다.',
+        variant: 'success',
+      });
+
+      // 폼 초기화
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        category: '',
+        message: '',
+        privacy: false,
+      });
+
+      // 문의 내역 페이지로 이동
+      router.push('/dashboard/inquiries');
+    } catch (error) {
+      console.error('문의 제출 실패:', error);
+      toast({
+        title: '오류',
+        description: '문의 제출에 실패했습니다. 다시 시도해주세요.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
@@ -14,89 +112,97 @@ export default function ContactPage() {
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">문의 양식</h2>
 
-          <form className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="name">
                   이름 *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   id="name"
-                  name="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="mt-1"
                   placeholder="이름을 입력하세요"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <Label htmlFor="email">
                   이메일 *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="email"
                   id="email"
-                  name="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="mt-1"
                   placeholder="이메일을 입력하세요"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="subject">
                 제목 *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 id="subject"
-                name="subject"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="mt-1"
                 placeholder="문의 제목을 입력하세요"
               />
             </div>
 
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="category">
                 문의 유형
-              </label>
-              <select
-                id="category"
-                name="category"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              </Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
               >
-                <option value="">문의 유형을 선택하세요</option>
-                <option value="general">일반 문의</option>
-                <option value="technical">기술 지원</option>
-                <option value="bug">버그 신고</option>
-                <option value="feature">기능 제안</option>
-                <option value="partnership">제휴 문의</option>
-                <option value="other">기타</option>
-              </select>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="문의 유형을 선택하세요" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">일반 문의</SelectItem>
+                  <SelectItem value="technical">기술 지원</SelectItem>
+                  <SelectItem value="bug">버그 신고</SelectItem>
+                  <SelectItem value="feature">기능 제안</SelectItem>
+                  <SelectItem value="partnership">제휴 문의</SelectItem>
+                  <SelectItem value="other">기타</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
-              <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="message">
                 메시지 *
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 id="message"
-                name="message"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 rows={6}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="mt-1"
                 placeholder="문의 내용을 자세히 입력하세요"
-              ></textarea>
+              />
             </div>
 
             <div className="flex items-center">
               <input
                 type="checkbox"
                 id="privacy"
-                name="privacy"
+                checked={formData.privacy}
+                onChange={(e) => setFormData({ ...formData, privacy: e.target.checked })}
                 required
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
@@ -106,12 +212,13 @@ export default function ContactPage() {
             </div>
 
             <div className="flex justify-end">
-              <button
+              <Button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                disabled={loading}
+                className="px-6 py-3"
               >
-                문의 보내기
-              </button>
+                {loading ? '제출 중...' : '문의 보내기'}
+              </Button>
             </div>
           </form>
         </div>

@@ -9,6 +9,7 @@ from app.models.refresh_token import CommonRefreshToken
 from app.models.audit_log import CommonAuditLog
 from app.models.file import CommonFile
 from app.models.locale import CommonLocale
+from app.models.inquiry import CommonInquiry
 from app.models.board import (
     BbsBoard, BbsCategory, BbsPost, BbsComment, BbsAttachment,
     BbsFileThumbnail, BbsPostLike, BbsCommentLike, BbsBookmark,
@@ -28,6 +29,7 @@ __all__ = [
     "CommonAuditLog",
     "CommonFile",
     "CommonLocale",
+    "CommonInquiry",
     # 게시판 모델들
     "BbsBoard", "BbsCategory", "BbsPost", "BbsComment", "BbsAttachment",
     "BbsFileThumbnail", "BbsPostLike", "BbsCommentLike", "BbsBookmark",

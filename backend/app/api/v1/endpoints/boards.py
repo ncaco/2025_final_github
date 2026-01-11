@@ -594,6 +594,120 @@ async def get_posts(
     )
 
 
+# 관리자용 게시글 목록 조회 엔드포인트 (라우팅 순서 중요: /posts/{post_id}보다 앞에 배치)
+@router.get(
+    "/posts/admin",
+    response_model=PostListResponse,
+    summary="전체 게시글 목록 조회 (관리자용)",
+    description="모든 게시글 목록을 조회합니다. 관리자 권한이 필요합니다."
+)
+async def get_all_posts_admin(
+    board_id: Optional[int] = Query(None, description="게시판 ID 필터"),
+    category_id: Optional[int] = Query(None, description="카테고리 ID 필터"),
+    status: Optional[PostStatus] = Query(None, description="게시글 상태 필터"),
+    search_query: Optional[str] = Query(None, description="검색 쿼리"),
+    author_id: Optional[str] = Query(None, description="작성자 ID 필터"),
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    limit: int = Query(20, ge=1, le=1000, description="페이지당 항목 수"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(is_admin_user)
+):
+    """전체 게시글 목록 조회 (관리자용)"""
+    offset = (page - 1) * limit
+
+    # 기본 쿼리
+    query = db.query(
+        BbsPost,
+        CommonUser.nickname.label('author_nickname'),
+        BbsCategory.nm.label('category_nm'),
+        BbsBoard.nm.label('board_nm')
+    ).join(
+        CommonUser, BbsPost.user_id == CommonUser.user_id
+    ).outerjoin(
+        BbsCategory, BbsPost.category_id == BbsCategory.id
+    ).join(
+        BbsBoard, BbsPost.board_id == BbsBoard.id
+    ).filter(
+        BbsPost.stts != PostStatus.DELETED  # 삭제된 게시물 제외
+    )
+
+    # 게시판 필터
+    if board_id:
+        query = query.filter(BbsPost.board_id == board_id)
+
+    # 카테고리 필터
+    if category_id:
+        query = query.filter(BbsPost.category_id == category_id)
+
+    # 상태 필터
+    if status:
+        query = query.filter(BbsPost.stts == status)
+
+    # 작성자 필터
+    if author_id:
+        query = query.filter(BbsPost.user_id == author_id)
+
+    # 검색 필터
+    if search_query:
+        search_filter = or_(
+            BbsPost.ttl.ilike(f'%{search_query}%'),
+            BbsPost.cn.ilike(f'%{search_query}%'),
+            BbsPost.smmry.ilike(f'%{search_query}%'),
+            CommonUser.nickname.ilike(f'%{search_query}%')
+        )
+        query = query.filter(search_filter)
+
+    # 정렬 및 페이지네이션
+    query = query.order_by(
+        BbsPost.ntce_yn.desc(),
+        BbsPost.pbl_dt.desc()
+    )
+
+    total_count = query.count()
+    posts = query.offset(offset).limit(limit).all()
+
+    # 응답 포맷팅
+    post_list = []
+    for post, author_nickname, category_nm, board_nm in posts:
+        post_dict = PostResponse.from_orm(post).dict()
+        post_dict['author_nickname'] = author_nickname
+        post_dict['category_nm'] = category_nm
+        post_dict['board_nm'] = board_nm
+
+        # 조회수 계산 (bbs_post_views 테이블 기반)
+        view_count = db.query(func.count(BbsPostView.id)).filter(
+            BbsPostView.post_id == post.id
+        ).scalar() or 0
+        post_dict['vw_cnt'] = int(view_count)
+
+        # 댓글수 계산
+        comment_count = db.query(func.count(BbsComment.id)).filter(
+            BbsComment.post_id == post.id,
+            BbsComment.stts != CommentStatus.DELETED
+        ).scalar() or 0
+        post_dict['cmt_cnt'] = int(comment_count)
+
+        # 태그 정보 조회
+        tags = db.query(BbsTag.nm).join(
+            BbsPostTag, BbsTag.id == BbsPostTag.tag_id
+        ).filter(
+            BbsPostTag.post_id == post.id
+        ).all()
+        post_dict['tags'] = [tag[0] for tag in tags]
+
+        post_list.append(PostResponse(**post_dict))
+
+    total_pages = (total_count + limit - 1) // limit
+
+    return PostListResponse(
+        posts=post_list,
+        total_count=total_count,
+        page=page,
+        limit=limit,
+        total_pages=total_pages
+    )
+
+
 @router.get(
     "/posts/{post_id}",
     response_model=PostDetailResponse,
@@ -1165,6 +1279,263 @@ async def delete_comment(
     return {"message": "댓글이 삭제되었습니다"}
 
 
+# 관리자용 댓글 관리 엔드포인트
+@router.get(
+    "/comments/admin",
+    response_model=List[CommentResponse],
+    summary="전체 댓글 목록 조회 (관리자용)",
+    description="모든 댓글 목록을 조회합니다. 관리자 권한이 필요합니다.",
+    dependencies=[Depends(is_admin_user)]
+)
+async def get_all_comments_admin(
+    board_id: Optional[int] = Query(None, description="게시판 ID 필터"),
+    post_id: Optional[int] = Query(None, description="게시글 ID 필터"),
+    status: Optional[CommentStatus] = Query(None, description="댓글 상태 필터"),
+    search_query: Optional[str] = Query(None, description="댓글 내용 검색"),
+    skip: int = Query(0, ge=0, description="건너뛸 레코드 수"),
+    limit: int = Query(50, ge=1, le=200, description="반환할 최대 레코드 수"),
+    db: Session = Depends(get_db)
+):
+    """전체 댓글 목록 조회 (관리자용)"""
+    query = db.query(
+        BbsComment,
+        CommonUser.nickname.label('author_nickname'),
+        BbsPost.ttl.label('post_title'),
+        BbsPost.board_id.label('board_id')
+    ).join(
+        CommonUser, BbsComment.user_id == CommonUser.user_id
+    ).join(
+        BbsPost, BbsComment.post_id == BbsPost.id
+    ).filter(
+        BbsComment.stts != CommentStatus.DELETED
+    )
+
+    if board_id:
+        query = query.filter(BbsPost.board_id == board_id)
+
+    if post_id:
+        query = query.filter(BbsComment.post_id == post_id)
+
+    if status:
+        query = query.filter(BbsComment.stts == status)
+
+    if search_query:
+        query = query.filter(BbsComment.cn.ilike(f'%{search_query}%'))
+
+    comments = query.order_by(BbsComment.crt_dt.desc()).offset(skip).limit(limit).all()
+
+    comment_list = []
+    for comment, author_nickname, post_title, board_id_val in comments:
+        comment_dict = {
+            'id': comment.id,
+            'post_id': comment.post_id,
+            'user_id': comment.user_id,
+            'cn': comment.cn,
+            'parent_id': comment.parent_id,
+            'scr_yn': comment.scr_yn,
+            'stts': comment.stts,
+            'lk_cnt': comment.lk_cnt,
+            'depth': comment.depth,
+            'sort_order': comment.sort_order,
+            'crt_dt': comment.crt_dt,
+            'upd_dt': comment.upd_dt,
+            'use_yn': True,
+            'author_nickname': author_nickname or '익명',
+            'is_liked': False,
+            'children': []
+        }
+        comment_list.append(CommentResponse(**comment_dict))
+
+    return comment_list
+
+
+@router.put(
+    "/comments/{comment_id}/hide",
+    response_model=CommentResponse,
+    summary="댓글 숨김 (관리자용)",
+    description="댓글을 숨깁니다. 관리자 권한이 필요합니다.",
+    dependencies=[Depends(is_admin_user)]
+)
+async def hide_comment_admin(
+    comment_id: int = Path(..., description="댓글 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """댓글 숨김 (관리자용)"""
+    from datetime import datetime
+    from app.models.board import BbsAdminLog, AdminActionType
+    
+    comment = db.query(BbsComment).filter(
+        BbsComment.id == comment_id,
+        BbsComment.stts != CommentStatus.DELETED
+    ).first()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="댓글을 찾을 수 없습니다"
+        )
+
+    old_status = comment.stts.value if hasattr(comment.stts, 'value') else str(comment.stts)
+    comment.stts = CommentStatus.HIDDEN
+
+    # 관리자 로그 기록
+    admin_log = BbsAdminLog(
+        admin_id=current_user.user_id,
+        act_typ=AdminActionType.COMMENT_HIDE,
+        act_dsc=f"댓글 #{comment_id} 숨김",
+        target_typ="COMMENT",
+        target_id=comment_id,
+        old_val={"status": old_status},
+        new_val={"status": "HIDDEN"}
+    )
+    db.add(admin_log)
+    db.commit()
+    db.refresh(comment)
+
+    # 작성자 닉네임 조회
+    author = db.query(CommonUser).filter(
+        CommonUser.user_id == comment.user_id
+    ).first()
+
+    comment_dict = {
+        'id': comment.id,
+        'post_id': comment.post_id,
+        'user_id': comment.user_id,
+        'cn': comment.cn,
+        'parent_id': comment.parent_id,
+        'scr_yn': comment.scr_yn,
+        'stts': comment.stts,
+        'lk_cnt': comment.lk_cnt,
+        'depth': comment.depth,
+        'sort_order': comment.sort_order,
+        'crt_dt': comment.crt_dt,
+        'upd_dt': comment.upd_dt,
+        'use_yn': True,
+        'author_nickname': author.nickname if author else '익명',
+        'is_liked': False,
+        'children': []
+    }
+
+    return CommentResponse(**comment_dict)
+
+
+@router.put(
+    "/comments/{comment_id}/show",
+    response_model=CommentResponse,
+    summary="댓글 표시 (관리자용)",
+    description="숨겨진 댓글을 다시 표시합니다. 관리자 권한이 필요합니다.",
+    dependencies=[Depends(is_admin_user)]
+)
+async def show_comment_admin(
+    comment_id: int = Path(..., description="댓글 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """댓글 표시 (관리자용)"""
+    from datetime import datetime
+    from app.models.board import BbsAdminLog, AdminActionType
+    
+    comment = db.query(BbsComment).filter(
+        BbsComment.id == comment_id,
+        BbsComment.stts != CommentStatus.DELETED
+    ).first()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="댓글을 찾을 수 없습니다"
+        )
+
+    old_status = comment.stts.value if hasattr(comment.stts, 'value') else str(comment.stts)
+    comment.stts = CommentStatus.PUBLISHED
+
+    # 관리자 로그 기록
+    admin_log = BbsAdminLog(
+        admin_id=current_user.user_id,
+        act_typ=AdminActionType.COMMENT_SHOW,
+        act_dsc=f"댓글 #{comment_id} 표시",
+        target_typ="COMMENT",
+        target_id=comment_id,
+        old_val={"status": old_status},
+        new_val={"status": "PUBLISHED"}
+    )
+    db.add(admin_log)
+    db.commit()
+    db.refresh(comment)
+
+    # 작성자 닉네임 조회
+    author = db.query(CommonUser).filter(
+        CommonUser.user_id == comment.user_id
+    ).first()
+
+    comment_dict = {
+        'id': comment.id,
+        'post_id': comment.post_id,
+        'user_id': comment.user_id,
+        'cn': comment.cn,
+        'parent_id': comment.parent_id,
+        'scr_yn': comment.scr_yn,
+        'stts': comment.stts,
+        'lk_cnt': comment.lk_cnt,
+        'depth': comment.depth,
+        'sort_order': comment.sort_order,
+        'crt_dt': comment.crt_dt,
+        'upd_dt': comment.upd_dt,
+        'use_yn': True,
+        'author_nickname': author.nickname if author else '익명',
+        'is_liked': False,
+        'children': []
+    }
+
+    return CommentResponse(**comment_dict)
+
+
+@router.delete(
+    "/comments/{comment_id}/admin",
+    summary="댓글 삭제 (관리자용)",
+    description="댓글을 삭제합니다. 관리자 권한이 필요합니다.",
+    dependencies=[Depends(is_admin_user)]
+)
+async def delete_comment_admin(
+    comment_id: int = Path(..., description="댓글 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """댓글 삭제 (관리자용)"""
+    from datetime import datetime
+    from app.models.board import BbsAdminLog, AdminActionType
+    
+    comment = db.query(BbsComment).filter(
+        BbsComment.id == comment_id,
+        BbsComment.stts != CommentStatus.DELETED
+    ).first()
+
+    if not comment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="댓글을 찾을 수 없습니다"
+        )
+
+    old_status = comment.stts.value if hasattr(comment.stts, 'value') else str(comment.stts)
+    comment.stts = CommentStatus.DELETED
+
+    # 관리자 로그 기록
+    admin_log = BbsAdminLog(
+        admin_id=current_user.user_id,
+        act_typ=AdminActionType.COMMENT_HIDE,  # 삭제는 숨김으로 처리
+        act_dsc=f"댓글 #{comment_id} 삭제",
+        target_typ="COMMENT",
+        target_id=comment_id,
+        old_val={"status": old_status},
+        new_val={"status": "DELETED"}
+    )
+    db.add(admin_log)
+    db.commit()
+
+    return {"message": "댓글이 삭제되었습니다"}
+
+
 @router.post(
     "/comments/{comment_id}/like",
     summary="댓글 좋아요 토글",
@@ -1479,6 +1850,166 @@ async def get_popular_posts(
 
     # 인기도 점수로 정렬하고 상위 limit개만 반환
     result.sort(key=lambda x: x.popularity_score, reverse=True)
+    return result[:limit]
+
+
+@router.get(
+    "/statistics/boards",
+    response_model=List[BoardStatisticsResponse],
+    summary="게시판별 통계 조회",
+    description="모든 게시판의 통계 정보를 조회합니다."
+)
+async def get_board_statistics(
+    db: Session = Depends(get_db)
+):
+    """게시판별 통계 조회"""
+    from datetime import datetime, timedelta
+    
+    # 지난 주 시작일
+    last_week_start = datetime.now() - timedelta(days=7)
+    today = datetime.now().date()
+    
+    boards = db.query(BbsBoard).filter(
+        BbsBoard.del_yn == False,
+        BbsBoard.actv_yn == True
+    ).all()
+    
+    result = []
+    for board in boards:
+        # 전체 게시글 수
+        total_posts = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.stts != PostStatus.DELETED
+        ).scalar() or 0
+        
+        # 공개 게시글 수
+        published_posts = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.stts == PostStatus.PUBLISHED,
+            BbsPost.stts != PostStatus.DELETED
+        ).scalar() or 0
+        
+        # 지난 주 게시글 수
+        posts_last_week = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.crt_dt >= last_week_start,
+            BbsPost.stts != PostStatus.DELETED
+        ).scalar() or 0
+        
+        # 오늘 게시글 수
+        posts_today = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.board_id == board.id,
+            func.date(BbsPost.crt_dt) == today,
+            BbsPost.stts != PostStatus.DELETED
+        ).scalar() or 0
+        
+        # 최근 게시글 날짜
+        last_post = db.query(BbsPost.crt_dt).filter(
+            BbsPost.board_id == board.id,
+            BbsPost.stts != PostStatus.DELETED
+        ).order_by(BbsPost.crt_dt.desc()).first()
+        
+        last_post_date = last_post[0] if last_post else None
+        
+        result.append(BoardStatisticsResponse(
+            id=board.id,
+            nm=board.nm,
+            total_posts=int(total_posts),
+            published_posts=int(published_posts),
+            posts_last_week=int(posts_last_week),
+            posts_today=int(posts_today),
+            last_post_date=last_post_date
+        ))
+    
+    return result
+
+
+@router.get(
+    "/statistics/user-activity",
+    response_model=List[UserActivityStatsResponse],
+    summary="사용자 활동 통계 조회",
+    description="사용자별 활동 통계를 조회합니다."
+)
+async def get_user_activity_stats(
+    limit: int = Query(10, ge=1, le=100, description="반환할 사용자 수"),
+    db: Session = Depends(get_db)
+):
+    """사용자 활동 통계 조회"""
+    from app.models.user import CommonUser
+    
+    users = db.query(CommonUser).filter(
+        CommonUser.del_yn == False,
+        CommonUser.actv_yn == True
+    ).limit(limit * 2).all()  # 더 많이 가져온 후 정렬
+    
+    result = []
+    for user in users:
+        # 게시글 수
+        total_posts = db.query(func.count(BbsPost.id)).filter(
+            BbsPost.user_id == user.user_id,
+            BbsPost.stts != PostStatus.DELETED
+        ).scalar() or 0
+        
+        # 댓글 수
+        total_comments = db.query(func.count(BbsComment.id)).filter(
+            BbsComment.user_id == user.user_id,
+            BbsComment.stts != CommentStatus.DELETED
+        ).scalar() or 0
+        
+        # 게시글 좋아요 수 (받은 좋아요)
+        total_post_likes = db.query(func.count(BbsPostLike.id)).join(
+            BbsPost, BbsPostLike.post_id == BbsPost.id
+        ).filter(
+            BbsPost.user_id == user.user_id
+        ).scalar() or 0
+        
+        # 댓글 좋아요 수 (받은 좋아요)
+        total_comment_likes = db.query(func.count(BbsCommentLike.id)).join(
+            BbsComment, BbsCommentLike.comment_id == BbsComment.id
+        ).filter(
+            BbsComment.user_id == user.user_id
+        ).scalar() or 0
+        
+        # 북마크 수
+        total_bookmarks = db.query(func.count(BbsBookmark.id)).filter(
+            BbsBookmark.user_id == user.user_id
+        ).scalar() or 0
+        
+        # 최근 활동 날짜 (게시글 또는 댓글 중 최신)
+        last_post = db.query(BbsPost.crt_dt).filter(
+            BbsPost.user_id == user.user_id,
+            BbsPost.stts != PostStatus.DELETED
+        ).order_by(BbsPost.crt_dt.desc()).first()
+        
+        last_comment = db.query(BbsComment.crt_dt).filter(
+            BbsComment.user_id == user.user_id,
+            BbsComment.stts != CommentStatus.DELETED
+        ).order_by(BbsComment.crt_dt.desc()).first()
+        
+        last_activity_date = None
+        if last_post and last_comment:
+            last_activity_date = max(last_post[0], last_comment[0])
+        elif last_post:
+            last_activity_date = last_post[0]
+        elif last_comment:
+            last_activity_date = last_comment[0]
+        
+        # 활동 점수 계산 (게시글*10 + 댓글*5 + 좋아요*2)
+        activity_score = total_posts * 10 + total_comments * 5 + (total_post_likes + total_comment_likes) * 2
+        
+        result.append(UserActivityStatsResponse(
+            user_id=user.user_id,
+            nickname=user.nickname,
+            total_posts=int(total_posts),
+            total_comments=int(total_comments),
+            total_post_likes=int(total_post_likes),
+            total_comment_likes=int(total_comment_likes),
+            total_bookmarks=int(total_bookmarks),
+            last_activity_date=last_activity_date
+        ))
+    
+    # 활동 점수로 정렬하고 상위 limit개만 반환
+    result.sort(key=lambda x: x.total_posts * 10 + x.total_comments * 5 + (x.total_post_likes + x.total_comment_likes) * 2, reverse=True)
     return result[:limit]
 
 

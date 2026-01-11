@@ -213,6 +213,7 @@ class PostResponse(PostBase):
     upd_dt: Optional[datetime]
     author_nickname: Optional[str] = None
     category_nm: Optional[str] = None
+    board_nm: Optional[str] = None
     tags: Optional[List[str]] = None
 
     class Config:
@@ -364,6 +365,7 @@ class ReportResponse(BaseModel):
     processed_by: Optional[str]
     prcs_dt: Optional[datetime]
     crt_dt: datetime
+    board_nm: Optional[str] = None  # 게시판명 (POST 타입인 경우)
 
 
 # 알림 스키마

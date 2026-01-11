@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/button';
 import { logoutApi } from '@/lib/api/auth';
 import { useToast } from '@/hooks/useToast';
 import { isAdmin } from '@/utils/roles';
-import { ChevronDown, MessageSquare, TrendingUp, Heart, Star, Plus, User, LogOut, LayoutDashboard } from 'lucide-react';
+import { ChevronDown, MessageSquare, TrendingUp, Heart, Star, Plus, User, LogOut, LayoutDashboard, Settings } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 import { boardApi } from '@/lib/api/boards';
 import { Board } from '@/types/board';
 import {
@@ -261,6 +262,9 @@ export function Header() {
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <>
+                {/* 알림 드롭다운 */}
+                <NotificationDropdown />
+                
                 {/* 프로필 드롭다운 메뉴 */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -297,6 +301,12 @@ export function Header() {
                       <Link href="/profile" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
                         <span>프로필</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>설정</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

@@ -192,14 +192,27 @@ export const postApi = {
 
   // 게시글 목록 조회
   getPosts: (params: {
-    board_id: number;
+    board_id?: number;
     category_id?: number;
     status?: 'PUBLISHED' | 'DRAFT' | 'DELETED' | 'HIDDEN' | 'SECRET';
     search_query?: string;
+    author_id?: string;
     page?: number;
     limit?: number;
   }) =>
     get<PostListResponse>('/api/v1/boards/posts', { params }),
+
+  // 게시글 목록 조회 (관리자용)
+  getAllPosts: (params?: {
+    board_id?: number;
+    category_id?: number;
+    status?: 'PUBLISHED' | 'DRAFT' | 'DELETED' | 'HIDDEN' | 'SECRET';
+    search_query?: string;
+    author_id?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    get<PostListResponse>('/api/v1/boards/posts/admin', { params }),
 
   // 게시글 상세 조회
   getPost: (postId: number, password?: string) =>

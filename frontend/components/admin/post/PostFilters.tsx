@@ -90,14 +90,16 @@ export function PostFilters({ filters, onFiltersChange }: PostFiltersProps) {
         <div>
           <label className="text-sm font-medium">게시판</label>
           <Select
-            value={filters.board_id?.toString() || ''}
-            onValueChange={(value) => handleFilterChange('board_id', value ? Number(value) : undefined)}
+            value={filters.board_id?.toString() || '__all__'}
+            onValueChange={(value) => handleFilterChange('board_id', value === '__all__' ? undefined : Number(value))}
           >
             <SelectTrigger>
               <SelectValue placeholder="전체 게시판" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">전체 게시판</SelectItem>
+              {!filters.board_id && (
+                <SelectItem value="__all__">전체 게시판</SelectItem>
+              )}
               {boards.map((board) => (
                 <SelectItem key={board.id} value={board.id.toString()}>
                   {board.nm}
@@ -110,15 +112,17 @@ export function PostFilters({ filters, onFiltersChange }: PostFiltersProps) {
         <div>
           <label className="text-sm font-medium">카테고리</label>
           <Select
-            value={filters.category_id?.toString() || ''}
-            onValueChange={(value) => handleFilterChange('category_id', value ? Number(value) : undefined)}
+            value={filters.category_id?.toString() || '__all__'}
+            onValueChange={(value) => handleFilterChange('category_id', value === '__all__' ? undefined : Number(value))}
             disabled={!filters.board_id}
           >
             <SelectTrigger>
               <SelectValue placeholder="전체 카테고리" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">전체 카테고리</SelectItem>
+              {!filters.category_id && (
+                <SelectItem value="__all__">전체 카테고리</SelectItem>
+              )}
               {categories.map((category) => (
                 <SelectItem key={category.id} value={category.id.toString()}>
                   {category.nm}
@@ -131,14 +135,16 @@ export function PostFilters({ filters, onFiltersChange }: PostFiltersProps) {
         <div>
           <label className="text-sm font-medium">상태</label>
           <Select
-            value={filters.status || ''}
-            onValueChange={(value) => handleFilterChange('status', value || undefined)}
+            value={filters.status || '__all__'}
+            onValueChange={(value) => handleFilterChange('status', value === '__all__' ? undefined : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="전체 상태" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">전체 상태</SelectItem>
+              {!filters.status && (
+                <SelectItem value="__all__">전체 상태</SelectItem>
+              )}
               <SelectItem value="PUBLISHED">게시됨</SelectItem>
               <SelectItem value="DRAFT">임시저장</SelectItem>
               <SelectItem value="HIDDEN">숨김</SelectItem>
@@ -151,14 +157,16 @@ export function PostFilters({ filters, onFiltersChange }: PostFiltersProps) {
         <div>
           <label className="text-sm font-medium">작성자</label>
           <Select
-            value={filters.author_id || ''}
-            onValueChange={(value) => handleFilterChange('author_id', value || undefined)}
+            value={filters.author_id || '__all__'}
+            onValueChange={(value) => handleFilterChange('author_id', value === '__all__' ? undefined : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="전체 작성자" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">전체 작성자</SelectItem>
+              {!filters.author_id && (
+                <SelectItem value="__all__">전체 작성자</SelectItem>
+              )}
               {/* TODO: 작성자 목록을 API로 가져와서 표시 */}
               <SelectItem value="admin">관리자</SelectItem>
               <SelectItem value="user1">사용자1</SelectItem>

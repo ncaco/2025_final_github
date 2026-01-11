@@ -105,13 +105,139 @@ async def get_reports(
     db: Session = Depends(get_db)
 ):
     """신고 목록 조회"""
-    query = db.query(BbsReport).filter(BbsReport.del_yn == False)
+    query = db.query(BbsReport)
 
     if status:
         query = query.filter(BbsReport.stts == status)
 
     reports = query.order_by(BbsReport.crt_dt.desc()).offset(skip).limit(limit).all()
-    return reports
+    
+    # 각 신고에 대해 게시판명 조회 (POST 타입인 경우)
+    result = []
+    for report in reports:
+        board_nm = None
+        if report.target_type == ReportTargetType.POST:
+            # 게시글의 게시판 정보 조회
+            post = db.query(BbsPost).filter(BbsPost.id == report.target_id).first()
+            if post:
+                board = db.query(BbsBoard).filter(BbsBoard.id == post.board_id).first()
+                if board:
+                    board_nm = board.nm
+        
+        # ReportResponse로 변환
+        report_dict = {
+            'id': report.id,
+            'reporter_id': report.reporter_id,
+            'target_type': report.target_type,
+            'target_id': report.target_id,
+            'rsn': report.rsn,
+            'dsc': report.dsc,
+            'stts': report.stts,
+            'processed_by': report.processed_by,
+            'prcs_dt': report.prcs_dt,
+            'crt_dt': report.crt_dt,
+            'board_nm': board_nm
+        }
+        result.append(ReportResponse(**report_dict))
+    
+    return result
+
+
+@router.put(
+    "/reports/{report_id}/resolve",
+    response_model=ReportResponse,
+    summary="신고 처리",
+    description="신고를 처리 완료로 표시합니다. 관리자 권한이 필요합니다.",
+    dependencies=[Depends(is_admin_user)]
+)
+async def resolve_report(
+    report_id: int = Path(..., description="신고 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """신고 처리"""
+    from datetime import datetime
+    from app.models.board import BbsAdminLog, AdminActionType
+    
+    report = db.query(BbsReport).filter(
+        BbsReport.id == report_id
+    ).first()
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="신고를 찾을 수 없습니다"
+        )
+
+    # 신고 상태 업데이트
+    report.stts = ReportStatus.RESOLVED
+    report.processed_by = current_user.user_id
+    report.prcs_dt = datetime.utcnow()
+
+    # 관리자 로그 기록
+    admin_log = BbsAdminLog(
+        admin_id=current_user.user_id,
+        act_typ=AdminActionType.REPORT_RESOLVE,
+        act_dsc=f"신고 #{report_id} 처리 완료",
+        target_typ=report.target_type.value,
+        target_id=report.target_id,
+        old_val={"status": report.stts.value if hasattr(report.stts, 'value') else str(report.stts)},
+        new_val={"status": "RESOLVED"}
+    )
+    db.add(admin_log)
+    db.commit()
+    db.refresh(report)
+
+    return report
+
+
+@router.put(
+    "/reports/{report_id}/dismiss",
+    response_model=ReportResponse,
+    summary="신고 거부",
+    description="신고를 거부합니다. 관리자 권한이 필요합니다.",
+    dependencies=[Depends(is_admin_user)]
+)
+async def dismiss_report(
+    report_id: int = Path(..., description="신고 ID"),
+    db: Session = Depends(get_db),
+    current_user: CommonUser = Depends(get_current_active_user)
+):
+    """신고 거부"""
+    from datetime import datetime
+    from app.models.board import BbsAdminLog, AdminActionType
+    
+    report = db.query(BbsReport).filter(
+        BbsReport.id == report_id
+    ).first()
+
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="신고를 찾을 수 없습니다"
+        )
+
+    # 신고 상태 업데이트
+    old_status = report.stts.value if hasattr(report.stts, 'value') else str(report.stts)
+    report.stts = ReportStatus.DISMISSED
+    report.processed_by = current_user.user_id
+    report.prcs_dt = datetime.utcnow()
+
+    # 관리자 로그 기록
+    admin_log = BbsAdminLog(
+        admin_id=current_user.user_id,
+        act_typ=AdminActionType.REPORT_RESOLVE,
+        act_dsc=f"신고 #{report_id} 거부",
+        target_typ=report.target_type.value,
+        target_id=report.target_id,
+        old_val={"status": old_status},
+        new_val={"status": "DISMISSED"}
+    )
+    db.add(admin_log)
+    db.commit()
+    db.refresh(report)
+
+    return report
 
 
 # 팔로우 기능 엔드포인트
@@ -312,8 +438,7 @@ async def get_notifications(
 ):
     """알림 목록 조회"""
     query = db.query(BbsNotification).filter(
-        BbsNotification.user_id == current_user.user_id,
-        BbsNotification.del_yn == False
+        BbsNotification.user_id == current_user.user_id
     )
 
     if is_read is not None:
@@ -336,8 +461,7 @@ async def mark_notification_read(
     """알림 읽음 처리"""
     notification = db.query(BbsNotification).filter(
         BbsNotification.id == notification_id,
-        BbsNotification.user_id == current_user.user_id,
-        BbsNotification.del_yn == False
+        BbsNotification.user_id == current_user.user_id
     ).first()
 
     if not notification:
@@ -364,8 +488,7 @@ async def mark_all_notifications_read(
     """모든 알림 읽음 처리"""
     db.query(BbsNotification).filter(
         BbsNotification.user_id == current_user.user_id,
-        BbsNotification.is_read == False,
-        BbsNotification.del_yn == False
+        BbsNotification.is_read == False
     ).update({"is_read": True})
 
     db.commit()

@@ -3,18 +3,9 @@
  */
 'use client';
 
-import { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { useState, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,40 +25,41 @@ import {
   Paperclip
 } from 'lucide-react';
 import { Post } from '@/types/board';
-import { formatDateTime } from '@/lib/utils/format';
+import { Loading } from '@/components/common/Loading';
 
 interface PostTableProps {
   posts: Post[];
   loading: boolean;
-  selectedPosts: number[];
-  onSelectPost: (postId: number, selected: boolean) => void;
-  onSelectAll: (selected: boolean) => void;
+  selectedPosts?: number[];
+  onSelectPost?: (postId: number, selected: boolean) => void;
+  onSelectAll?: (selected: boolean) => void;
   onUpdate: (postId: number, data: any) => Promise<void>;
   onDelete: (postId: number) => Promise<void>;
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
+  currentPage?: number;
+  itemsPerPage?: number;
+  totalCount?: number;
 }
 
 export function PostTable({
   posts,
   loading,
-  selectedPosts,
+  selectedPosts = [],
   onSelectPost,
   onSelectAll,
   onUpdate,
   onDelete,
-  currentPage,
-  totalPages,
-  onPageChange,
+  currentPage = 1,
+  itemsPerPage = 10,
+  totalCount = 0,
 }: PostTableProps) {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [postToDelete, setPostToDelete] = useState<Post | null>(null);
 
-  const allSelected = posts.length > 0 && selectedPosts.length === posts.length;
-  const someSelected = selectedPosts.length > 0 && selectedPosts.length < posts.length;
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const isScrollingRef = useRef<string | null>(null);
 
   const handleEdit = (post: Post) => {
     setSelectedPost(post);
@@ -112,185 +104,190 @@ export function PostTable({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-32">
-        <div className="text-muted-foreground">로딩 중...</div>
+      <div className="flex items-center justify-center py-12">
+        <Loading size="lg" />
+      </div>
+    );
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12 text-muted-foreground">
+        게시글이 없습니다.
       </div>
     );
   }
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox
-                  checked={allSelected || someSelected}
-                  onCheckedChange={onSelectAll}
-                />
-              </TableHead>
-              <TableHead>제목</TableHead>
-              <TableHead>작성자</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead>통계</TableHead>
-              <TableHead>작성일</TableHead>
-              <TableHead className="w-[70px]">작업</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {posts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  게시글이 없습니다.
-                </TableCell>
-              </TableRow>
-            ) : (
-              posts.map((post) => (
-                <TableRow key={post.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedPosts.includes(post.id)}
-                      onCheckedChange={(checked) =>
-                        onSelectPost(post.id, checked as boolean)
-                      }
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium max-w-md">
-                    <div>
-                      <div className="font-semibold truncate">{post.ttl}</div>
-                      {post.smmry && (
-                        <div className="text-sm text-muted-foreground line-clamp-1">
-                          {post.smmry}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 mt-1">
-                        {post.ntce_yn && (
-                          <Badge variant="destructive" className="text-xs">공지</Badge>
-                        )}
-                        {post.scr_yn && (
-                          <Badge variant="outline" className="text-xs">비밀</Badge>
-                        )}
-                        {post.tags && post.tags.length > 0 && (
-                          <div className="flex gap-1">
-                            {post.tags.slice(0, 2).map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                            {post.tags.length > 2 && (
-                              <Badge variant="secondary" className="text-xs">
-                                +{post.tags.length - 2}
-                              </Badge>
-                            )}
+      <div className="rounded-md border flex flex-col h-full">
+        {/* 테이블 헤더 (고정) */}
+        <div
+          className="shrink-0 overflow-x-auto"
+          ref={headerScrollRef}
+          onScroll={(e) => {
+            if (isScrollingRef.current === 'body') return;
+            const target = e.currentTarget;
+            if (bodyScrollRef.current) {
+              isScrollingRef.current = 'header';
+              bodyScrollRef.current.scrollLeft = target.scrollLeft;
+              requestAnimationFrame(() => {
+                isScrollingRef.current = null;
+              });
+            }
+          }}
+        >
+          <table className="w-full border-collapse table-fixed">
+            <colgroup>
+              <col className="w-[200px]" />
+              <col className="w-[60px]" />
+              <col className="w-[60px]" />
+              <col className="w-[120px]" />
+              <col className="w-[100px]" />
+              <col className="w-[100px]" />
+              <col className="w-[120px]" />
+              <col className="w-[100px]" />
+              <col className="w-20" />
+            </colgroup>
+            <thead className="bg-background">
+              <tr>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">제목</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">공지</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">비밀</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">작성자</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">상태</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">통계</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">게시판</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">작성일자</th>
+                <th className="h-12 p-1 text-center border font-medium text-muted-foreground">작업</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+
+        {/* 테이블 바디 (스크롤 가능) */}
+        <div
+          className="flex-1 min-h-0 overflow-auto"
+          ref={bodyScrollRef}
+          onScroll={(e) => {
+            if (isScrollingRef.current === 'header') return;
+            const target = e.currentTarget;
+            if (headerScrollRef.current) {
+              isScrollingRef.current = 'body';
+              headerScrollRef.current.scrollLeft = target.scrollLeft;
+              requestAnimationFrame(() => {
+                isScrollingRef.current = null;
+              });
+            }
+          }}
+        >
+          <table className="w-full border-collapse table-fixed">
+            <colgroup>
+              <col className="w-[200px]" />
+              <col className="w-[60px]" />
+              <col className="w-[60px]" />
+              <col className="w-[120px]" />
+              <col className="w-[100px]" />
+              <col className="w-[100px]" />
+              <col className="w-[120px]" />
+              <col className="w-[100px]" />
+              <col className="w-20" />
+            </colgroup>
+            <tbody>
+              {posts.map((post, index) => {
+                // 역순 번호 계산
+                const rowNumber = totalCount > 0
+                  ? totalCount - (currentPage - 1) * itemsPerPage - index
+                  : (currentPage - 1) * itemsPerPage + index + 1;
+                return (
+                  <tr key={post.id} className="border-b transition-colors hover:bg-muted/50">
+                    <td className="p-1 border align-middle">
+                      <div>
+                        <div className="font-semibold truncate">{post.ttl}</div>
+                        {post.smmry && (
+                          <div className="text-xs text-muted-foreground line-clamp-1 mt-1">
+                            {post.smmry}
                           </div>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      {post.author_nickname || '알 수 없음'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusColor(post.stts)}>
-                      {getStatusLabel(post.stts)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {post.vw_cnt}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Heart className="h-3 w-3" />
-                        {post.lk_cnt}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        {post.cmt_cnt}
-                      </div>
-                      {post.att_cnt > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Paperclip className="h-3 w-3" />
-                          {post.att_cnt}
-                        </div>
+                    </td>
+                    <td className="p-1 border text-center align-middle">
+                      {post.ntce_yn ? (
+                        <Badge variant="destructive" className="text-xs">공지</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(post.crt_dt)}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(post)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          수정
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleStatus(post)}>
-                          {post.stts === 'HIDDEN' ? (
-                            <>
-                              <Eye className="mr-2 h-4 w-4" />
-                              게시
-                            </>
-                          ) : (
-                            <>
-                              <EyeOff className="mr-2 h-4 w-4" />
-                              숨기기
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(post)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          삭제
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* 페이지네이션 */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-muted-foreground">
-            페이지 {currentPage} / {totalPages}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage <= 1}
-            >
-              이전
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage >= totalPages}
-            >
-              다음
-            </Button>
-          </div>
+                    </td>
+                    <td className="p-1 border text-center align-middle">
+                      {post.scr_yn ? (
+                        <Badge variant="outline" className="text-xs">비밀</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
+                    <td className="p-1 border align-middle">
+                      <div className="text-sm">{post.author_nickname || post.user_id}</div>
+                    </td>
+                    <td className="p-1 border text-center align-middle">
+                      <Badge variant={getStatusColor(post.stts)}>
+                        {getStatusLabel(post.stts)}
+                      </Badge>
+                    </td>
+                    <td className="p-1 border text-center align-middle">
+                      <div className="text-xs space-y-0.5">
+                        <div>조회: {post.vw_cnt}</div>
+                        <div>좋아요: {post.lk_cnt}</div>
+                        <div>댓글: {post.cmt_cnt}</div>
+                      </div>
+                    </td>
+                    <td className="p-1 border align-middle">
+                      <div className="text-sm text-center">{post.board_nm || `게시판 #${post.board_id}`}</div>
+                    </td>
+                    <td className="p-1 border text-center align-middle">
+                      {new Date(post.crt_dt).toLocaleDateString('ko-KR')}
+                    </td>
+                    <td className="p-1 border text-center align-middle w-20">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-7 w-7 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(post)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            수정
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(post)}>
+                            {post.stts === 'HIDDEN' ? (
+                              <>
+                                <Eye className="mr-2 h-4 w-4" />
+                                게시
+                              </>
+                            ) : (
+                              <>
+                                <EyeOff className="mr-2 h-4 w-4" />
+                                숨기기
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(post)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* 게시글 수정 모달 */}
       {selectedPost && (

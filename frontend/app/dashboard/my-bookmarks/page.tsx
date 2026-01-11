@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Bookmark } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
+import Link from 'next/link';
 
 export default function MyBookmarksPage() {
   const { toast } = useToast();
@@ -21,8 +23,8 @@ export default function MyBookmarksPage() {
   const loadBookmarks = async () => {
     try {
       setLoading(true);
-      // TODO: API 호출로 실제 데이터 로드
-      setBookmarks([]);
+      const response = await dashboardApi.getMyBookmarks(1, 20);
+      setBookmarks(response.items);
     } catch (error) {
       console.error('북마크 로드 실패:', error);
       toast({
@@ -60,15 +62,16 @@ export default function MyBookmarksPage() {
           ) : (
             <div className="space-y-4">
               {bookmarks.map((bookmark) => (
-                <div
+                <Link
                   key={bookmark.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  href={`/boards/${bookmark.board_id}/posts/${bookmark.post_id}`}
+                  className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <h3 className="font-medium">{bookmark.post_title}</h3>
                   <p className="text-sm text-muted-foreground mt-1">
-                    저장일: {new Date(bookmark.created_at).toLocaleString('ko-KR')}
+                    {bookmark.board_name} · 저장일: {new Date(bookmark.created_at).toLocaleString('ko-KR')}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

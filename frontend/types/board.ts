@@ -110,6 +110,7 @@ export interface Post {
   use_yn: boolean;
   author_nickname?: string;
   category_nm?: string;
+  board_nm?: string;
   tags?: string[];
 }
 

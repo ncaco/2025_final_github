@@ -8,6 +8,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { dashboardApi } from '@/lib/api/dashboard';
+import Link from 'next/link';
 
 export default function MyFollowsPage() {
   const { toast } = useToast();
@@ -21,8 +23,8 @@ export default function MyFollowsPage() {
   const loadFollows = async () => {
     try {
       setLoading(true);
-      // TODO: API 호출로 실제 데이터 로드
-      setFollows([]);
+      const response = await dashboardApi.getMyFollows(1, 20);
+      setFollows(response.items);
     } catch (error) {
       console.error('팔로우 로드 실패:', error);
       toast({
@@ -60,15 +62,21 @@ export default function MyFollowsPage() {
           ) : (
             <div className="space-y-4">
               {follows.map((follow) => (
-                <div
+                <Link
                   key={follow.id}
-                  className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  href={`/boards/${follow.board_id}`}
+                  className="block p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <h3 className="font-medium">{follow.board_name}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  {follow.board_description && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {follow.board_description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
                     팔로우일: {new Date(follow.created_at).toLocaleString('ko-KR')}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           )}

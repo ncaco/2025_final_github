@@ -15,6 +15,7 @@ export interface Report {
   processed_by?: string;
   prcs_dt?: string;
   crt_dt: string;
+  board_nm?: string;  // 게시판명 (POST 타입인 경우)
 }
 
 export interface ReportCreate {
@@ -123,6 +124,14 @@ export const reportApi = {
   // 신고 처리 (관리자용)
   updateReport: (reportId: number, data: ReportUpdate) =>
     put<Report>(`/api/v1/board-extra/reports/${reportId}`, data),
+
+  // 신고 처리 완료 (관리자용)
+  resolveReport: (reportId: number) =>
+    put<Report>(`/api/v1/board-extra/reports/${reportId}/resolve`),
+
+  // 신고 거부 (관리자용)
+  dismissReport: (reportId: number) =>
+    put<Report>(`/api/v1/board-extra/reports/${reportId}/dismiss`),
 };
 
 // 팔로우 API 함수들

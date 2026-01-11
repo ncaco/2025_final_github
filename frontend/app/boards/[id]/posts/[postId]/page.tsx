@@ -26,12 +26,14 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  Lock
+  Lock,
+  Flag
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ReportDialog } from '@/components/common/ReportDialog';
 // 날짜 포맷팅 유틸리티 함수
 const formatDate = (date: Date | string) => {
   const d = new Date(date);
@@ -68,6 +70,8 @@ export default function PostDetailPage() {
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
   const [accessDeniedMessage, setAccessDeniedMessage] = useState('');
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportingCommentId, setReportingCommentId] = useState<number | null>(null);
 
   // 데이터 로드
   useEffect(() => {
@@ -507,8 +511,8 @@ export default function PostDetailPage() {
                 <Badge variant="secondary" className="text-xs">비밀</Badge>
               )}
             </div>
-            {isCommentAuthor && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {isCommentAuthor && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -517,8 +521,22 @@ export default function PostDetailPage() {
                 >
                   <Trash2 className="h-3 w-3" />
                 </Button>
-              </div>
-            )}
+              )}
+              {!isCommentAuthor && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setReportingCommentId(comment.id);
+                    setShowReportDialog(true);
+                  }}
+                  className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                  title="신고"
+                >
+                  <Flag className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
           </div>
           
           <div className="text-slate-800 mb-3 whitespace-pre-wrap">{comment.cn}</div>
@@ -700,28 +718,41 @@ export default function PostDetailPage() {
                 </div>
 
                 {/* 액션 버튼들 */}
-                {isAuthor && (
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                  {isAuthor && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleEditPost}
+                        className="flex items-center gap-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                        수정
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDeletePost}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        삭제
+                      </Button>
+                    </>
+                  )}
+                  {!isAuthor && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleEditPost}
-                      className="flex items-center gap-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      수정
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDeletePost}
+                      onClick={() => setShowReportDialog(true)}
                       className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      삭제
+                      <Flag className="h-4 w-4" />
+                      신고
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </CardHeader>
 
@@ -894,6 +925,26 @@ export default function PostDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 신고 다이얼로그 */}
+      <ReportDialog
+        open={showReportDialog}
+        onOpenChange={(open) => {
+          setShowReportDialog(open);
+          if (!open) {
+            setReportingCommentId(null);
+          }
+        }}
+        targetType={reportingCommentId ? 'COMMENT' : 'POST'}
+        targetId={reportingCommentId || Number(postId)}
+        targetTitle={
+          reportingCommentId
+            ? comments
+                .flatMap((c) => [c, ...(c.children || [])])
+                .find((c) => c.id === reportingCommentId)?.cn?.substring(0, 50)
+            : post?.ttl
+        }
+      />
     </div>
   );
 }
