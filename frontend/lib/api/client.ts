@@ -3,14 +3,20 @@
  * 토큰 관리, 인터셉터, 에러 처리 등을 포함합니다.
  */
 
-// 동적으로 API_BASE_URL 설정 (프로덕션에서는 현재 도메인 사용)
+// 환경 변수를 우선적으로 사용하는 API_BASE_URL 설정
 const getApiBaseUrl = () => {
+  // 환경 변수가 설정되어 있으면 우선 사용
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // 브라우저 환경에서 환경 변수가 없으면 현재 도메인 사용 (프로덕션)
   if (typeof window !== 'undefined') {
-    // 브라우저 환경에서 현재 도메인 사용 (ngrok 등)
     return window.location.origin;
   }
-  // 서버 사이드에서는 환경변수 사용
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  
+  // 서버 사이드 기본값
+  return 'http://localhost:8000';
 };
 
 const API_BASE_URL = getApiBaseUrl();
