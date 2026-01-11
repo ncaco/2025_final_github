@@ -18,7 +18,17 @@ export async function register(data: RegisterRequest): Promise<User> {
  * 백엔드가 form-urlencoded 형식을 요구하므로 별도 처리
  */
 export async function login(data: LoginRequest): Promise<Token> {
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  // 동적으로 API_BASE_URL 설정 (프로덕션에서는 현재 도메인 사용)
+  const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      // 브라우저 환경에서 현재 도메인 사용
+      return window.location.origin;
+    }
+    // 서버 사이드에서는 환경변수 사용
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  };
+  
+  const API_BASE_URL = getApiBaseUrl();
   const formData = new URLSearchParams();
   formData.append('username', data.username);
   formData.append('password', data.password);

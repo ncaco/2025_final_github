@@ -63,3 +63,4 @@ dmypy.json
 
 env.local
 env.production
+env.*
