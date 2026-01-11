@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "2026 Challenge",
+  title: "NCACO",
   description: "2026 챌린지 프로젝트",
 };
 

@@ -183,7 +183,7 @@ export function Header() {
             >
               <Image
                 src="/logo.svg"
-                alt="2026 Challenge Logo"
+                alt="NCACO Logo"
                 width={32}
                 height={32}
                 className="h-8 w-8"
@@ -191,7 +191,7 @@ export function Header() {
               />
               <div className="flex items-baseline gap-2">
                 <span className="text-xl font-bold text-foreground">
-                  2026 Challenge
+                  NCACO
                 </span>
               </div>
             </Link>

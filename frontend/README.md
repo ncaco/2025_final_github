@@ -364,7 +364,7 @@ Next.js에서 환경 변수는 `NEXT_PUBLIC_` 접두사를 사용해야 클라�
 ```env
 # .env.local
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_NAME=2026 Challenge
+NEXT_PUBLIC_APP_NAME=NCACO
 ```
 
 서버 사이드 전용 환경 변수는 접두사 없이 사용할 수 있습니다:

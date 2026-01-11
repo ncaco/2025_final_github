@@ -1,4 +1,4 @@
-# Cursor Rules for 2026 Challenge Project
+# Cursor Rules for NCACO Project
 
 ## Development Environment
 - Backend: FastAPI server running on `http://localhost:8000` with auto-reload enabled

@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">개인정보처리방침</h1>
-          <p className="text-xl text-gray-600">2026 Challenge의 개인정보 처리 방침</p>
+          <p className="text-xl text-gray-600">NCACO의 개인정보 처리 방침</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">1. 개인정보의 수집 및 이용 목적</h2>
               <p className="text-gray-700 mb-4">
-                2026 Challenge(이하 "서비스")는 다음과 같은 목적으로 개인정보를 수집하고 이용합니다:
+                NCACO(이하 "서비스")는 다음과 같은 목적으로 개인정보를 수집하고 이용합니다:
               </p>
               <ul className="list-disc list-inside text-gray-700 space-y-2 mb-4">
                 <li>회원 가입 및 관리</li>
@@ -120,7 +120,7 @@ export default function PrivacyPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">8. 개인정보 보호책임자</h2>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-gray-700">
-                  <strong>이름:</strong> 2026 Challenge 운영팀<br/>
+                  <strong>이름:</strong> NCACO 운영팀<br/>
                   <strong>이메일:</strong> privacy@2026challenge.com<br/>
                   <strong>연락처:</strong> contact@2026challenge.com
                 </p>

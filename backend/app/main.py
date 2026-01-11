@@ -8,7 +8,7 @@ from app.api.v1.router import api_router
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    description="2026 Challenge Project Backend API",
+    description="NCACO Project Backend API",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -35,7 +35,7 @@ app.include_router(api_router, prefix="/api/v1")
 async def root():
     """루트 엔드포인트"""
     return {
-        "message": "2026 Challenge Project Backend API",
+        "message": "NCACO Project Backend API",
         "version": settings.app_version,
         "docs": "/docs"
     }

@@ -7,7 +7,7 @@ export default function AboutPage() {
       <div className="max-w-4xl mx-auto">
         {/* 헤더 섹션 */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">2026 Challenge 소개</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">NCACO 소개</h1>
           <p className="text-xl text-gray-600">매월 하나의 MVP 서비스를 개발하는 챌린지 프로젝트</p>
         </div>
 
@@ -16,7 +16,7 @@ export default function AboutPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">프로젝트 개요</h2>
           <div className="prose prose-lg max-w-none">
             <p className="text-gray-700 mb-4">
-              2026 Challenge는 매월 새로운 MVP(Minimum Viable Product) 서비스를 개발하고 배포하는
+              NCACO는 매월 새로운 MVP(Minimum Viable Product) 서비스를 개발하고 배포하는
               도전적인 프로젝트입니다. 이 프로젝트는 현대적인 웹 개발 기술 스택을 활용하여
               실무에서 사용할 수 있는 완전한 애플리케이션을 구축하는 것을 목표로 합니다.
             </p>

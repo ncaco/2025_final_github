@@ -7,7 +7,7 @@ export default function DocsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">API 문서</h1>
-          <p className="text-xl text-gray-600">2026 Challenge 프로젝트의 API 명세서</p>
+          <p className="text-xl text-gray-600">NCACO 프로젝트의 API 명세서</p>
         </div>
 
         {/* API 문서 링크 */}

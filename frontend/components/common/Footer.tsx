@@ -19,12 +19,12 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
               <Image
                 src="/logo.svg"
-                alt="2026 Challenge Logo"
+                alt="NCACO Logo"
                 width={32}
                 height={32}
                 className="h-8 w-8"
               />
-              <span className="text-lg font-bold text-foreground">2026 Challenge</span>
+              <span className="text-lg font-bold text-foreground">NCACO</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
               매월 하나의 MVP 서비스를 개발하는 챌린지 프로젝트입니다.
@@ -178,7 +178,7 @@ export function Footer() {
         <div className="mt-12 border-t pt-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <p className="text-sm text-muted-foreground">
-              © {currentYear} 2026 Challenge Project. All rights reserved.
+              © {currentYear} NCACO Project. All rights reserved.
             </p>
             <div className="flex items-center gap-6">
               <Link

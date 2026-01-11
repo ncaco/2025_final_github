@@ -86,7 +86,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 DATABASE_URL=postgresql://postgres:password@localhost:5432/common_db
 
 # 애플리케이션 설정
-APP_NAME=2026 Challenge API
+APP_NAME=NCACO API
 APP_VERSION=1.0.0
 DEBUG=True
 
@@ -257,7 +257,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(
-    title="2026 Challenge API",
+    title="NCACO API",
     description="2026 챌린지 프로젝트 API",
     version="1.0.0"
 )

@@ -59,7 +59,7 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ### 서버 상태 확인
 ```bash
 curl http://localhost:8000/
-# 응답: {"message": "2026 Challenge Project Backend API", "version": "1.0.0", "docs": "/docs"}
+# 응답: {"message": "NCACO Project Backend API", "version": "1.0.0", "docs": "/docs"}
 ```
 
 ## API 엔드포인트

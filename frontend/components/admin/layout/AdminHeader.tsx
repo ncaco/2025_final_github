@@ -89,7 +89,7 @@ export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, is
               <div className="relative">
                 <Image
                   src="/logo.svg"
-                  alt="2026 Challenge Logo"
+                  alt="NCACO Logo"
                   width={36}
                   height={36}
                   className="h-9 w-9 drop-shadow-sm"
@@ -99,7 +99,7 @@ export function AdminHeader({ onToggleSidebar, isSidebarOpen, onToggleHeader, is
               <div className="hidden lg:flex flex-col">
                 <div className="flex items-baseline gap-2">
                   <span className="text-lg font-bold text-foreground tracking-tight">
-                    2026 Challenge
+                    NCACO
                   </span>
                   <span className="text-[10px] font-bold text-primary uppercase tracking-[0.15em] px-1.5 py-0.5 rounded bg-primary/10">
                     Admin

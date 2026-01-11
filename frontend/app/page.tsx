@@ -12,7 +12,7 @@ export default function Home() {
     <div className="container mx-auto py-10">
       <div className="flex flex-col items-center justify-center space-y-8">
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold tracking-tight">2026 Challenge</h1>
+          <h1 className="text-4xl font-bold tracking-tight">NCACO</h1>
           <p className="text-xl text-muted-foreground">
             매월 하나의 MVP 서비스를 개발하는 챌린지 프로젝트
           </p>

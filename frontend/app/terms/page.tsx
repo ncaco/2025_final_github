@@ -7,7 +7,7 @@ export default function TermsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">이용약관</h1>
-          <p className="text-xl text-gray-600">2026 Challenge 서비스 이용약관</p>
+          <p className="text-xl text-gray-600">NCACO 서비스 이용약관</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-8">
@@ -19,7 +19,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">제1조 (목적)</h2>
               <p className="text-gray-700 mb-4">
-                본 약관은 2026 Challenge(이하 "서비스")가 제공하는 모든 서비스의 이용 조건 및 절차,
+                본 약관은 NCACO(이하 "서비스")가 제공하는 모든 서비스의 이용 조건 및 절차,
                 이용자와 서비스 제공자의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
               </p>
             </section>
@@ -27,7 +27,7 @@ export default function TermsPage() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">제2조 (용어의 정의)</h2>
               <ul className="list-disc list-inside text-gray-700 space-y-2">
-                <li><strong>"서비스"</strong>라 함은 2026 Challenge가 제공하는 모든 온라인 서비스를 의미합니다.</li>
+                <li><strong>"서비스"</strong>라 함은 NCACO가 제공하는 모든 온라인 서비스를 의미합니다.</li>
                 <li><strong>"이용자"</strong>라 함은 본 약관에 따라 서비스를 이용하는 모든 사용자를 의미합니다.</li>
                 <li><strong>"회원"</strong>라 함은 서비스에 개인정보를 제공하여 회원등록을 한 자로서, 서비스의 정보를 지속적으로 제공받으며, 서비스를 계속적으로 이용할 수 있는 자를 의미합니다.</li>
                 <li><strong>"콘텐츠"</strong>라 함은 서비스에서 제공하는 모든 정보, 자료, 텍스트, 이미지, 동영상 등을 의미합니다.</li>
