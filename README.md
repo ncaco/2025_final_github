@@ -72,11 +72,26 @@
 
 2. **환경 변수 설정**
    
-   프로젝트 루트에 `.env` 파일을 생성하세요.
-   ```env
-   DATABASE_URL=postgresql://username:password@localhost:5432/dbname
-   NEXT_PUBLIC_API_URL=http://localhost:8000
+   환경별 설정 파일을 복사하여 실제 환경 변수 파일을 생성하세요.
+   
+   **로컬 개발 환경:**
+   ```powershell
+   # Backend
+   cd backend
+   Copy-Item env.local.example env.local
+   
+   # Frontend
+   cd ../frontend
+   Copy-Item env.local.example .env.local
+   
+   # Server (Docker)
+   cd ../server
+   Copy-Item env.local.example .env.local
    ```
+   
+   각 환경 변수 파일을 열어 실제 값으로 변경하세요.
+   
+   자세한 내용은 [ENVIRONMENT-SETUP.md](ENVIRONMENT-SETUP.md)를 참고하세요.
 
 3. **백엔드 실행**
    ```powershell
@@ -101,6 +116,8 @@
 
 ## 문서
 
+- [환경 설정 가이드](ENVIRONMENT-SETUP.md) - 로컬/개발/프로덕션 환경 설정
+- [빌드 및 배포 가이드](BUILD-DEPLOY.md) - 환경별 빌드 및 배포 방법
 - [프론트엔드 문서](frontend/README.md) - Next.js 개발 가이드
 - [백엔드 문서](backend/README.md) - FastAPI 개발 가이드
 - [데이터베이스 문서](database/README.md) - PostgreSQL 스키마 설계 가이드
